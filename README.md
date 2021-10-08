@@ -46,7 +46,7 @@ Winboard UI notes:
 - Post is ON by default, as opposed to the winboard protocol. This is just for debugging convenience and it appears that a lot of engines do this anyway.
 
 General Notes:
-- Myrddin's "very lazy SMP" implementation uses multiple secondary processes to fill the transposition, eval and pawn hash tables so the primary process can search deeper in the same amount of time.
+- Myrddin's "very lazy SMP" implementation uses up to 15 secondary processes to fill the transposition, eval and pawn hash tables so the primary process can search deeper in the same amount of time. Set the number of total processes in myrddin.ini.
 - Myrddin uses Pradu Kannan's "magicmoves" code for move generation of sliding pieces.
 - This the first version of Myrddin to have a tapered eval, and the eval was hand-tuned using a very rudimentary Texel tuning system.
 - Search is basic alpha/beta, with reasonable and generally conservative extensions and reductions.
