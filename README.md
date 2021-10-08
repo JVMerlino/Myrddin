@@ -38,6 +38,7 @@ Myrddin also supports the following non-winboard commands:
 - "eval", which returns a static evaluation of the current game position 
 - "perft N" and "divide N", where 'N' is the perft depth requested
 - "tb", which toggles Gaviota endgame tablebase support
+
 None of these commands are supported while Myrddin is searching/analyzing.
 
 Winboard UI notes: 
