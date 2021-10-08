@@ -1,6 +1,7 @@
 # Myrddin
 Myrddin is an XBoard/WinBoard compatible chess engine written in C. 
 It supports protover 1 primarily to support the Chessmaster interface, and also protover 2. 
+
 Included in this repository are two modules graciously provided by other authors and protected by the licenses stated in their code:
 - magicmoves by Pradu Kannan - bitboard move generation for sliding pieces
 - ProDeo Opening Book probing code by Ed Schröder
