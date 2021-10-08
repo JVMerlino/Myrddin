@@ -1,6 +1,7 @@
 # Myrddin
 Myrddin is an XBoard/WinBoard compatible chess engine written in C. 
 It supports protover 1 primarily to support the Chessmaster interface, and also protover 2. 
+Download binaries at http://computer-chess.org/doku.php?id=computer_chess:engines:myrddin:index
 
 Included in this repository are two modules graciously provided by other authors and protected by the licenses stated in their code:
 - magicmoves.c and magicmoves.h by Pradu Kannan - bitboard move generation for sliding pieces
@@ -61,7 +62,7 @@ FULL DISCLOSURE:
 Myrddin's Winboard interface is based on Tom Kerrigan's excellent TSCP engine, for which Tom has graciously given permission.
 
 Many thanks to the following brilliant people, in no particular order, who helped/guided me (either directly or indirectly) in countless ways with their work:
-- Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's download site at http://computer-chess.org/doku.php?id=computer_chess:engines:myrddin:index)
+- Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's download site)
 - Martin Sedlak - Cheng (guided me through tuning)
 - Lars Hallerstrom - The Mad Tester!
 - Dann Corbit - instrumental in bringing the first bitboard version to release
