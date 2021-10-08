@@ -3,12 +3,12 @@ Myrddin is an XBoard/WinBoard compatible chess engine written in C.
 It supports protover 1 primarily to support the Chessmaster interface, and also protover 2. 
 
 Included in this repository are two modules graciously provided by other authors and protected by the licenses stated in their code:
-- magicmoves by Pradu Kannan - bitboard move generation for sliding pieces
-- ProDeo Opening Book probing code by Ed Schröder
+- magicmoves.c and magicmoves.h by Pradu Kannan - bitboard move generation for sliding pieces
+- book.cpp and book.h by Ed Schröder - ProDeo opening book probing code 
 
-NOT included in this repository is the code by Miguel Ballicora to support Gaviota tablebases. You can find information about them at https://sites.google.com/site/gaviotachessengine/Home/endgame-tablebases-1
+NOT included in this repository is the code by Miguel Ballicora to support Gaviota tablebases. You can find information about them and download links at https://sites.google.com/site/gaviotachessengine/Home/endgame-tablebases-1
 
-Myrddin Version 0.88 plays approximately 2500 ELO (CCRL) at 1 CPU and 2600 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 110 points compared to version 0.87.
+Myrddin Version 0.88 plays approximately 2570 ELO (CCRL - https://ccrl.chessdom.com/ccrl/4040/rating_list_all.html) at 1 CPU and 2670 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 110 points compared to version 0.87.
 
 The following winboard commands are supported:
 - protover
