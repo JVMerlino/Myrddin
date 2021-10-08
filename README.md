@@ -63,7 +63,7 @@ Many thanks to the following brilliant people, in no particular order, who helpe
 - Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's download site at http://computer-chess.org/doku.php?id=computer_chess:engines:myrddin:index)
 - Martin Sedlak - Cheng (guided me through tuning)
 - Lars Hallerstrom - The Mad Tester!
-- Dann Corbit (instrumental in bringing the first bitboard version to release)
+- Dann Corbit - instrumental in bringing the first bitboard version to release
 - Bruce Moreland - Gerbil (well-documented and explained code on his website taught me the basics)
 - Tom Kerrigan - TSCP (a great starting point)
 - Dr. Robert Hyatt - Crafty (helped us all)
