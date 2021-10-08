@@ -11,33 +11,33 @@ NOT included in this repository is the code by Miguel Ballicora to support Gavio
 Myrddin Version 0.88 plays approximately 2500 ELO (CCRL) at 1 CPU and 2600 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 110 points compared to version 0.87.
 
 The following winboard commands are supported:
-protover
-xboard
-new
-go
-?
-analyze
-playother
-setboard (also "loadfen")
-force
-white/black
-time
-level
-sd
-st
-hard/easy
-cores
-result
-undo
-post/nopost
-computer
-exit
-quit
+- protover
+- xboard
+- new
+- go
+- ?
+- analyze
+- playother
+- setboard (also "loadfen")
+- force
+- white/black
+- time
+- level
+- sd
+- st
+- hard/easy
+- cores
+- result
+- undo
+- post/nopost
+- computer
+- exit
+- quit
 
 Myrddin also supports the following non-winboard commands:
-"eval", which returns a static evaluation of the current game position 
-"perft N" and "divide N", where 'N' is the perft depth requested
-"tb", which toggles Gaviota endgame tablebase support
+- "eval", which returns a static evaluation of the current game position 
+- "perft N" and "divide N", where 'N' is the perft depth requested
+- "tb", which toggles Gaviota endgame tablebase support
 None of these commands are supported while Myrddin is searching/analyzing.
 
 Winboard UI notes: 
