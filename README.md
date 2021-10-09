@@ -58,7 +58,7 @@ General Notes:
 - Draw claims from the opponent are not supported, nor does Myrddin know how to claim a draw.
 - There is just enough winboard support to play games on ICS. But without support for "draw" offers, I suspect there are some scary loopholes and/or exploits. 
 - When the engine is in analysis mode, positive scores always favor White and negative scores always favor Black. When the engine is thinking or pondering, positive scores favor Myrddin.
-– Logfiles will be in the “logs” folder below the folder where you ran Myrddin. The output of the log is not very interesting – just PV output and communication reality-check stuff. If you are running Myrddin with multiple CPUs, there will be one logfile for each process.
+- Logfiles will be in the “logs” folder below the folder where you ran Myrddin. The output of the log is not very interesting – just PV output and communication reality-check stuff. If you are running Myrddin with multiple CPUs, there will be one logfile for each process.
 
 FULL DISCLOSURE: 
 Myrddin's Winboard interface is based on Tom Kerrigan's excellent TSCP engine, for which Tom has graciously given permission.
