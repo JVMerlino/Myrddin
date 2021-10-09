@@ -7,7 +7,7 @@ Included in this repository are two modules graciously provided by other authors
 - magicmoves.c and magicmoves.h by Pradu Kannan - bitboard move generation for sliding pieces
 - book.cpp and book.h by Ed Schröder - ProDeo opening book probing code 
 
-NOT included in this repository is the code by Miguel Ballicora to support Gaviota tablebases. You can find information about them and download links at https://sites.google.com/site/gaviotachessengine/Home/endgame-tablebases-1
+NOT included in this repository is the code by Miguel Ballicora to support Gaviota tablebases. You can find information about them and download links at https://sites.google.com/site/gaviotachessengine/Home/endgame-tablebases-1. To compile Myrddin without this support, just set USE_EGTB to FALSE in myrddin.h.
 
 If, for some reason, you want to compile this code, be sure to set your project to allow LOTS of stack - like 10MB. Otherwise, Myrddin will crash on extremely deep positions like Fine 70. You've been warned.
 
