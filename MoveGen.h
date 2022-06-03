@@ -42,7 +42,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define  CAPTURE_SORT_VAL	0x200000
 // #define  CHECK_SORT_VAL     0x100000
 
-#define  KILLER_1_SORT_VAL  0x200002	// this places killer moves after good or equal captures, but before losing captures
+#define  KILLER_1_SORT_VAL  0x200002	// this places killer moves after good captures, but before equal or losing captures
 #define  KILLER_2_SORT_VAL  0x200001
 #define  KILLER_3_SORT_VAL  0x200000
 #define  MATE_KILLER_BONUS  0 // 0x010000

@@ -13,7 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.If not, see < https://www.gnu.org/licenses/>.
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 // Myrddin chess engine written by John Merlino, with lots of inspiration, assistance and patience (and perhaps some code) by:
@@ -31,17 +31,22 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 // The Chessmaster Team -- Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// added tapered eval
-// created rudimentary tuning system and tuned all eval parameters except PSTs (I'm too lazy)
-// time management is now less conservative overall
-// fixed a bug in which the best move from IID might move farther down in the move order if it was also a killer
-// significantly reduced the frequency of checking for input from stdin
-// fixed a crash that could occur when making a very long PV string
-// fixed a bug that could cause the setboard/loadfen command to fail if the FEN string had any trailing whitespaces
-// removed "Mate in N" announcement from PVs during fail highs and fail lows
+// Added Mate Distance Pruning
+// Late Move Reductions are now more aggressive and use a logarithmic formula
+// Bad captures are now subject to LMR
+// Moved killer moves before equal captures in move ordering
+// Moved bad captures after quiet moves in move ordering
+// Moves that give check are no longer flagged as such at move generation, but instead during MakeMove()
+// Reduced the number of fail high/low results at the root before searching on full-width window
+// BitScan now uses an intrinsic function rather than MS Windows' BitScanForward64() - thank you to Pawel Osikowski and Bo Persson for the suggestion!
+// Null Move now uses a reduction of 3+(depth/6) instead of just 3
+// Myrddin will now move instantly if TBs are available and <=5 men on board. Previously it would "search" all the way to max depth (128) before moving, causing potential buffer problems with some GUIs at very fast time controls.
+// Minor evaluation tuning adjustments, most notably adding code for Bishop Outposts and a significant increase for pawns on the 7th rank
+// Increased the aggressiveness of SMP depth adjustment for child processes
 //
 // TODO -- In no particular order
-// SMP depth adjustment
+// Get pondering move after fail high
+// move ordering http://talkchess.com/forum3/viewtopic.php?f=7&t=77952&sid=b2e0af4a4211140d66e515b962f22308&start=10
 
 #include <stdio.h>
 #include <conio.h>
@@ -62,11 +67,11 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "magicmoves.h"
 
 #ifdef WIN64
-char	*szVersion = "Myrddin 0.88-64";
+char	*szVersion = "Myrddin 0.88h-64";
 #else
 char	*szVersion = "Myrddin 0.88-32";
 #endif
-char	*szInfo = "(7/18/21)";
+char	*szInfo = "(5/30/22)";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
@@ -885,22 +890,51 @@ void	HandleCommand(void)
         return;
     }
 
+#if 0   // use huge epd file from Andrew Grant
     if (!strcmp(command, "tune"))    // runs through epd file collecting static eval scores
     {
-        char    file[MAX_PATH];
-        double  K = 1.3757; // confirmed on Zurichess training set
-//      extern int mg, eg;
+        double  K = 1.1464;
+        extern int mg, eg, og;
 
-//      for (mg = 0; mg <= 9; mg++)
+        for (mg = 0; mg <= 0; mg++)
         {
-//          for (eg = 0; eg <= 3; eg++)
+            for (eg = 0; eg <= 0; eg++)
             {
-                bTuning = TRUE;
-                printf("%f ", K);
-                EPDTune("quiet-labeled.epd", K);    // training set file
-                bTuning = FALSE;
+                for (og = 0; og <= 0; og++)
+                {
+                    for (K = 1.1; K <= 1.2; K += 0.1)
+                    {
+                        bTuning = TRUE;
+                        printf("%d/%d/%d ", og, mg, eg);
+                        EPDTune("GrantTuning.epd", K);    // training set file
+                        bTuning = FALSE;
+                    }
+                }
             }
         }
+#else   // use small epd file from Alexandru Mosoi
+    if (!strcmp(command, "tune"))    // runs through epd file collecting static eval scores
+    {
+        double  K = 1.3706;
+        extern int mg, eg, og;
+
+        for (mg = 0; mg <= 0; mg++)
+        {
+            for (eg = 0; eg <= 0; eg++)
+            {
+                for (og = 0; og <= 0; og++)
+                {
+                    for (K = 1.361; K <= 1.363; K += 0.0001)
+                    {
+                        bTuning = TRUE;
+                        printf("%d/%d/%d, %f ", og, mg, eg, K);
+                        EPDTune("quiet-labeled.epd", K);    // training set file
+                        bTuning = FALSE;
+                    }
+                }
+            }
+        }
+#endif
 
         PromptForInput();
 
@@ -942,7 +976,11 @@ void	HandleCommand(void)
         CloseHash();
 #endif
         if (bLog)
-        fclose(logfile);
+        {
+            fflush(logfile);
+            fclose(logfile);
+        }
+
 #if USE_EGTB
         GaviotaTBClose();
 #endif
@@ -961,6 +999,9 @@ void	HandleCommand(void)
 			nEngineCommand = STOP_THINKING;
 			nCompSide = NO_SIDE;
 
+            if (bLog)
+                fflush(logfile);
+
 			return;
 		}
 		else
@@ -972,8 +1013,11 @@ void	HandleCommand(void)
 #if USE_HASH
 	        CloseHash();
 #endif
-		    if (bLog)
-				fclose(logfile);
+            if (bLog)
+            {
+                fflush(logfile);
+                fclose(logfile);
+            }
 #if USE_EGTB
 			GaviotaTBClose();
 #endif
@@ -1840,6 +1884,7 @@ int main(void)
 #endif
 
     initbitboards();
+    InitThink();
 
 	if (!bSlave)
 	    INITIALIZE();	// prodeo book
@@ -1999,12 +2044,17 @@ int main(void)
                 // iterative depth loop
                 do
                 {
-#if 0 // USE_SMP
-					if (bSlave && ((nSlaveNum & 1) == 0))
-						nEval = Think(nDepth+1);
-					else
+#if USE_SMP
+                    if (bSlave)
+                    {
+                        if (nSlaveNum & 1)
+                            nEval = Think(nDepth + 1);
+                        else
+                            nEval = Think(nDepth);
+                    }
+                    else
 #endif
-						nEval = Think(nDepth);
+					    nEval = Think(nDepth);
 
                     // we've been told to jump out of the loop, either due to a command or time concerns
                     if ((nEngineCommand == STOP_THINKING) || (nEngineCommand == END_THINKING))
@@ -2043,17 +2093,16 @@ int main(void)
                         break;
                     }
 
+                    // there's only one legal reply, so let's not waste time and just play the move
                     if ((nNumMoves == 1) && (nEngineMode == ENGINE_THINKING))
                     {
-                        // there's only one legal reply, so let's not waste time and just play the move
                         if (!bPondering && (nDepth >= 1))
                             break;	// not pondering, so depth 1 search is enough
                         if (bPondering && (nDepth >= 5))
                             break;	// search to depth 5 when pondering to guarantee a move to ponder on
                     }
 
-                    // check for checkmate eval at the current depth (no extensions)
-                    // if we get it twice in a row, just play the move to save time
+                    // check for being near checkmate at the current depth - if we get it twice in a row, just play the move to save time
                     if ((nDepth >= 5) && (nEval >= CHECKMATE - nDepth) && (nEngineMode == ENGINE_THINKING))
                     {
                         if (bFoundMate)
@@ -2064,14 +2113,22 @@ int main(void)
                     else
                         bFoundMate = FALSE;
 
+                    // if we have TBs and there are <=5 men on the board, just make the move
+                    if (tb_available && (BitCount(bbBoard.bbOccupancy) <= 5) && (nEngineMode == ENGINE_THINKING))
+                        break;
+
                     // are we at the requested search depth due to an "sd" command?
                     if (bExactThinkDepth && (nDepth >= nThinkDepth))
                         break;
 
                     nDepth++;
-#if USE_SMP // 0
-					if (bSlave && ((nSlaveNum & 1) == 0))
-						nDepth++;
+
+#if USE_SMP         // more aggressive depth adjustment for some child processes
+                    if (bSlave)
+                    {
+                        if ((nSlaveNum & 1) == 0)
+                            nDepth++;
+                    }
 #endif
 
                     if (((nEngineMode == ENGINE_PONDERING) || (nEngineMode == ENGINE_ANALYZING)) && (nDepth > MAX_DEPTH))

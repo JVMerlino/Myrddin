@@ -1,4 +1,4 @@
-/*
+/* 
 Myrddin XBoard / WinBoard compatible chess engine written in C
 Copyright(C) 2021  John Merlino
 
@@ -30,53 +30,51 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "FEN.h"
 #include "PArray.inc"
 
-int mg;
+int mg, eg, og; // for tuning
 
 // pawn vals
 #define DEBUG_PAWNS			FALSE
 
-#define DOUBLED_PAWN_MG		8	// penalty for doubled pawns
+#define DOUBLED_PAWN_MG		2	// penalty for doubled/tripled pawns
 #define DOUBLED_PAWN_EG		19
-#define BLOCKED_DOT_PAWN_MG 2   // penalty for doubled/tripled pawns that are also blocked
-#define BLOCKED_DOT_PAWN_EG 2
-#define ISOLATED_PAWN_MG	11  // penalty for isolated pawn
-#define ISOLATED_PAWN_EG	4
+#define BLOCKED_DOT_PAWN_MG 3   // penalty for doubled/tripled pawns that are also blocked
+#define BLOCKED_DOT_PAWN_EG 0
+#define ISOLATED_PAWN_MG	10  // penalty for isolated pawn
+#define ISOLATED_PAWN_EG	3
 #define PROTECTED_PASSER_MG 5   // bonus for protected passer
 #define PROTECTED_PASSER_EG 11
-#define CONNECTED_PASSER_MG 0   // bonus for connected passer
-#define CONNECTED_PASSER_EG 4
+#define CONNECTED_PASSER_MG 2   // bonus for connected passer
+#define CONNECTED_PASSER_EG 6
 #define ROOK_BEHIND_PASSER_MG  0  // bonus for rook behind passer
-#define ROOK_BEHIND_PASSER_EG  0  
-
-int	nPasserBonusMG[NCOLORS][BSIZE] =
-{
-    {0, 0, 7, 17, 0, 0, 0, 0},
-    {0, 0, 0, 0, 17, 7, 0, 0}
-};
-
-int	nPasserBonusEG[NCOLORS][BSIZE] =
-{
-    {0, 0, 32, 31, 17, 0, 0, 0},
-    {0, 0, 0, 17, 31, 32, 0, 0}
-};
+#define ROOK_BEHIND_PASSER_EG  9  
+#define PASSER_ON_FOURTH_MG 0   // bonuses for passers on specific ranks
+#define PASSER_ON_FOURTH_EG 18     
+#define PASSER_ON_FIFTH_MG  15     
+#define PASSER_ON_FIFTH_EG  33
+#define PASSER_ON_SIXTH_MG  9
+#define PASSER_ON_SIXTH_EG  32
 
 int nPasserKingDist[7] = { 0, 0, 3, 7, 13, 21, 31 };    // bonus/penalty for passer distance from own/enemy king - only applied to EG
 
 // bishop vals
-#define BISHOP_PAIR_MG		23  // bonus
-#define BISHOP_PAIR_EG		50	// bonus
+#define BISHOP_PAIR_MG		25  // bonus
+#define BISHOP_PAIR_EG		44	// bonus
 
 // rook vals
 enum { NOT_OPEN, OPEN_FILE, SEMIOPEN_FILE };
 #define OPEN_FILE_MG		29  // rook on open file bonus - only applied to MG
 
 // king safety
-#define F3_PAWN_SHIELD		8   // penalty
+#define F3_PAWN_SHIELD		1   // penalty
 #define F6_PAWN_SHIELD		F3_PAWN_SHIELD
-#define C3_PAWN_SHIELD		8  // penalty
+#define C3_PAWN_SHIELD		1   // penalty
 #define C6_PAWN_SHIELD		C3_PAWN_SHIELD
-#define NO_PAWN_SHIELD		16  // penalty for no pawn in front of king
-#define KING_ATTACKER		1	// value of each attack on square bordering king (doubled for king square)
+#define NO_PAWN_SHIELD		15  // penalty for no pawn in front of king
+#define Q_ATTACKER		    4   // value of each attack on king square or square bordering king - only applied to MG
+#define R_ATTACKER		    2	// value of each attack on king square or square bordering king - only applied to MG
+#define B_ATTACKER		    3	// value of each attack on king square or square bordering king - only applied to MG
+#define N_ATTACKER		   -4	// value of each attack on king square or square bordering king - only applied to MG
+#define KING_SQ_ATTACKER    5   // additional value of attacking king square directly
 
 int	BBKingMGTable[64] =
 {
@@ -202,6 +200,18 @@ int	BBKnightEGTable[64] =
 int	BBKnightOutpostTable[64] =  // only applied to MG
 {
     0,   0,   0,   0,   0,   0,   0,   0,
+    0,   6,   6,   6,   6,   6,   6,   0,
+    0,   6,  14,  18,  18,  14,   6,   0,
+    0,  10,  16,  22,  22,  16,  10,   0,
+    0,   8,  14,  16,  16,  14,   8,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   0,   0,   0,   0,   0,
+};
+
+int	BBBishopOutpostTable[64] =  // only applied to MG
+{
+    0,   0,   0,   0,   0,   0,   0,   0,
     0,   0,   0,   0,   0,   0,   0,   0,
     0,   0,   8,  12,  12,   8,   0,   0,
     0,   4,  10,  16,  16,  10,   4,   0,
@@ -214,7 +224,7 @@ int	BBKnightOutpostTable[64] =  // only applied to MG
 int	BBPawnMGTable[64] =
 {
     100, 100, 100, 100, 100, 100, 100, 100,
-    176, 214, 147, 194, 189, 214, 132,  77,
+    181, 219, 152, 199, 194, 219, 137,  82,
      82,  88, 106, 113, 150, 146, 110,  73,
      67,  93,  83,  95,  97,  92,  99,  63,
      55,  74,  80,  89,  94,  86,  90,  55,
@@ -226,7 +236,7 @@ int	BBPawnMGTable[64] =
 int	BBPawnEGTable[64] =
 {
     100, 100, 100, 100, 100, 100, 100, 100,
-    277, 270, 252, 229, 240, 233, 264, 285,
+    326, 319, 301, 278, 289, 282, 313, 334,
     190, 197, 182, 168, 155, 150, 180, 181,
     128, 117, 108, 102,  93, 100, 110, 110,
     107, 101,  89,  85,  86,  83,  92,  91,
@@ -240,26 +250,26 @@ int	BBPawnEGTable[64] =
 #define QUEEN_EG_ADJ   23
 #define ROOK_MG_ADJ     1
 #define ROOK_EG_ADJ    15 
-#define BISHOP_MG_ADJ   2  
-#define BISHOP_EG_ADJ   0   
-#define KNIGHT_MG_ADJ  17  
-#define KNIGHT_EG_ADJ   1   
-#define PAWN_MG_ADJ    -1    
+#define BISHOP_MG_ADJ   0  
+#define BISHOP_EG_ADJ  -2   
+#define KNIGHT_MG_ADJ  19  
+#define KNIGHT_EG_ADJ   2   
+#define PAWN_MG_ADJ    -4    
 #define PAWN_EG_ADJ    -2     
 
 // mobility 
-#define N_MOB_THRESHOLD 1 
+#define N_MOB_THRESHOLD 0 
 #define N_MOB_MG        1
 #define N_MOB_EG        2
 #define B_MOB_THRESHOLD 4 
 #define B_MOB_MG        3 
-#define B_MOB_EG        3 
-#define R_MOB_THRESHOLD 6  
+#define B_MOB_EG        4 
+#define R_MOB_THRESHOLD 5  
 #define R_MOB_MG        3  
-#define R_MOB_EG        2  
-#define Q_MOB_THRESHOLD 4 
-#define Q_MOB_MG        0 
-#define Q_MOB_EG        6 
+#define R_MOB_EG        3  
+#define Q_MOB_THRESHOLD 2
+#define Q_MOB_MG        0
+#define Q_MOB_EG        6
 
 BB_BOARD   *EvalBoard;
 int		nEval, nPawnEval;
@@ -371,8 +381,7 @@ void BBEvaluatePawns(int *mgEval, int *egEval)
     Bitboard pawns;
     int	n, sq;
     int pmgEval, pegEval;
-	int	nNumColPawnsOuter[10]={0};
-	int *nNumColPawns = &nNumColPawnsOuter[1];
+    int nNumColPawns[BSIZE];
 
 #if USE_PAWN_HASH
     if (!bTuning)
@@ -467,10 +476,22 @@ void BBEvaluatePawns(int *mgEval, int *egEval)
                 printf("white passed pawn found at square %d\n", pawnsq);
 #endif
 
-                if (rank != RANK_7) // PSTs already add bonus for reaching the 7th
+                switch (rank)
                 {
-                    pmgEval += nPasserBonusMG[WHITE][rank];
-                    pegEval += nPasserBonusEG[WHITE][rank];
+                    case RANK_6:
+                        pmgEval += PASSER_ON_SIXTH_MG;
+                        pegEval += PASSER_ON_SIXTH_EG;
+                        break;
+
+                    case RANK_5:
+                        pmgEval += PASSER_ON_FIFTH_MG;
+                        pegEval += PASSER_ON_FIFTH_EG;
+                        break;
+
+                    case RANK_4:
+                        pmgEval += PASSER_ON_FOURTH_MG;
+                        pegEval += PASSER_ON_FOURTH_EG;
+                        break;
                 }
 
                 // protected passed
@@ -495,9 +516,8 @@ void BBEvaluatePawns(int *mgEval, int *egEval)
 #endif
                 }
 
-#if 0
-                // rook behind passer - no ELO improvement!
-                Bitboard rook = EvalBoard->bbPieces[ROOK][WHITE] & FileMask[file] | EvalBoard->bbPieces[QUEEN][WHITE] & FileMask[file];
+                // rook behind passer
+                Bitboard rook = EvalBoard->bbPieces[ROOK][WHITE] & FileMask[file] /* | EvalBoard->bbPieces[QUEEN][WHITE] & FileMask[file] */;
                 if (rook && (BitScan(GetMSB(rook)) > pawnsq))
                 {
                     pmgEval += ROOK_BEHIND_PASSER_MG;
@@ -506,7 +526,6 @@ void BBEvaluatePawns(int *mgEval, int *egEval)
                     printf("   and there is a rook behind it\n");
 #endif
                 }
-#endif
 
                 // bonus/penalty for king distances
                 int ksq = BitScan(EvalBoard->bbPieces[KING][WHITE]);
@@ -599,11 +618,24 @@ void BBEvaluatePawns(int *mgEval, int *egEval)
                 printf("black passed pawn found at square %d\n", pawnsq);
 #endif
 
-                if (rank != RANK_2) // PSTs already add bonus for reaching 2nd
+                switch (rank)
                 {
-                    pmgEval -= nPasserBonusMG[BLACK][rank];
-                    pegEval -= nPasserBonusEG[BLACK][rank];
+                    case RANK_3:
+                        pmgEval -= PASSER_ON_SIXTH_MG;
+                        pegEval -= PASSER_ON_SIXTH_EG;
+                        break;
+
+                    case RANK_4:
+                        pmgEval -= PASSER_ON_FIFTH_MG;
+                        pegEval -= PASSER_ON_FIFTH_EG;
+                        break;
+
+                    case RANK_5:
+                        pmgEval -= PASSER_ON_FOURTH_MG;
+                        pegEval -= PASSER_ON_FOURTH_EG;
+                        break;
                 }
+
 
                 // protected passed
                 if (((file != FILE_H) && (EvalBoard->squares[pawnsq - 7] == BLACK_PAWN)) ||
@@ -627,10 +659,9 @@ void BBEvaluatePawns(int *mgEval, int *egEval)
 #endif
                 }
 
-#if 0
-                // rook behind passer - no ELO improvement!
+                // rook behind passer
 				INDEX_CHECK(file, FileMask);
-                Bitboard rook = EvalBoard->bbPieces[ROOK][BLACK] & FileMask[file] | EvalBoard->bbPieces[QUEEN][BLACK] & FileMask[file];
+                Bitboard rook = EvalBoard->bbPieces[ROOK][BLACK] & FileMask[file] /* | EvalBoard->bbPieces[QUEEN][BLACK] & FileMask[file] */;
                 if (rook && (BitScan(GetLSB(rook)) < pawnsq))
                 {
                     pmgEval -= ROOK_BEHIND_PASSER_MG;
@@ -639,7 +670,6 @@ void BBEvaluatePawns(int *mgEval, int *egEval)
                     printf("   and there is a rook behind it\n");
 #endif
                 }
-#endif
 
                 // bonus/penalty for king distances
                 int ksq = BitScan(EvalBoard->bbPieces[KING][BLACK]);
@@ -719,7 +749,7 @@ int BBEvaluate(BB_BOARD *Board, int nAlpha, int nBeta)
     }
 #endif
 
-    if (!tb_available)  // if tablebases are not available, check for material draw and do special code for KPvK ending
+    if (!tb_available)  // if tablebases are not available, check for material draw
     {
         int nTotalPieces = BitCount(EvalBoard->bbOccupancy);
 
@@ -802,7 +832,7 @@ FullEval:
                 col = sq & 7;
 
                 if (color == BLACK)
-                    ptsq = ((7 - row) << 3) + col;	// piece square table conversion
+                    ptsq = ptsq ^ 56;	// flip square vertically to get PST value for black pieces
 
                 // get piece info
                 mult = (color == WHITE ? 1 : -1);
@@ -834,6 +864,49 @@ FullEval:
                         nMob = BBBishopMobility(sq, color);
                         mgEval += nMob * B_MOB_MG * mult;
                         egEval += nMob * B_MOB_EG * mult;
+
+                        // outposts
+                        if ((col > FILE_A) && (col < FILE_H))	// no outposts on a or h file
+                        {
+                            if (color == WHITE)
+                            {
+                                if (row <= RANK_4)	// enemy territory
+                                {
+                                    // protected by pawn?
+                                    if ((EvalBoard->squares[sq + 7] == WHITE_PAWN) ||
+                                        (EvalBoard->squares[sq + 9] == WHITE_PAWN))
+                                    {
+                                        // can't be attacked by enemy pawn?
+                                        if ((EvalBoard->squares[sq - 7] != BLACK_PAWN) &&
+                                            (EvalBoard->squares[sq - 9] != BLACK_PAWN) &&
+                                            (EvalBoard->squares[sq - 15] != BLACK_PAWN) &&
+                                            (EvalBoard->squares[sq - 17] != BLACK_PAWN))
+                                        {
+                                            mgEval += BBBishopOutpostTable[ptsq];
+                                        }
+                                    }
+                                }
+                            }
+                            else	// BLACK
+                            {
+                                if (row >= RANK_5)	// enemy territory
+                                {
+                                    // protected by pawn?
+                                    if ((EvalBoard->squares[sq - 7] == BLACK_PAWN) ||
+                                        (EvalBoard->squares[sq - 9] == BLACK_PAWN))
+                                    {
+                                        // can't be attacked by enemy pawn?
+                                        if ((EvalBoard->squares[sq + 7] != WHITE_PAWN) &&
+                                            (EvalBoard->squares[sq + 9] != WHITE_PAWN) &&
+                                            (EvalBoard->squares[sq + 15] != WHITE_PAWN) &&
+                                            (EvalBoard->squares[sq + 17] != WHITE_PAWN))
+                                        {
+                                            mgEval -= BBBishopOutpostTable[ptsq];
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         break;
 
                     case KNIGHT:
@@ -995,29 +1068,51 @@ FullEval:
 
     while (squares)
     {
-        int	attacks = 0;
+        int attacks, king_sq_attacks;
+        BOOL bKingSq = FALSE;
         int square = BitScan(PopLSB(&squares));
+        king_sq_attacks = 0;
 
-        // add diagonal attacks with bishop and queen
-        attacks += BitCount((EvalBoard->bbPieces[BISHOP][BLACK] | EvalBoard->bbPieces[QUEEN][BLACK]) & bbDiagonalMoves[square]);
+        if (square == wksq)
+            bKingSq = TRUE;
 
-        // add straight attacks with rook and queen
-        attacks += BitCount((EvalBoard->bbPieces[ROOK][BLACK] | EvalBoard->bbPieces[QUEEN][BLACK]) & bbStraightMoves[square]);
+        // add attacks with queen
+        attacks = BitCount(EvalBoard->bbPieces[QUEEN][BLACK] & bbDiagonalMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval -= attacks * Q_ATTACKER;
+        attacks = BitCount(EvalBoard->bbPieces[QUEEN][BLACK] & bbStraightMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval -= attacks * Q_ATTACKER;
+
+        // add attacks with rook
+        attacks = BitCount(EvalBoard->bbPieces[ROOK][BLACK] & bbStraightMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval -= attacks * R_ATTACKER;
+
+        // add attacks with bishop
+        attacks = BitCount(EvalBoard->bbPieces[BISHOP][BLACK] & bbDiagonalMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval -= attacks * B_ATTACKER;
 
         // add knight attacks
-        attacks += BitCount(EvalBoard->bbPieces[KNIGHT][BLACK] & bbKnightMoves[square]);
+        attacks = BitCount(EvalBoard->bbPieces[KNIGHT][BLACK] & bbKnightMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval -= attacks * N_ATTACKER;
 
-        mgEval -= attacks * KING_ATTACKER;
-        // double the penalty for direct attacks on the king
-        if (square == wksq)
-            mgEval -= attacks * KING_ATTACKER;
+        if (bKingSq)
+            mgEval -= king_sq_attacks * KING_SQ_ATTACKER;
     }
 
     // eval Black King
-    // check for pawns shielding the king, penalty applies to middlegame eval only
     col = File(bksq);
     row = Rank(bksq);
 
+    // check for pawns shielding the king, penalty applies to middlegame eval only
     if (col >= FILE_F)
     {
         if (EvalBoard->squares[BB_F7] == BLACK_PAWN)
@@ -1062,22 +1157,44 @@ FullEval:
 
     while (squares)
     {
-        int	attacks = 0;
+        int attacks, king_sq_attacks;
+        BOOL bKingSq = FALSE;
         int square = BitScan(PopLSB(&squares));
 
-        // add diagonal attacks with bishop and queen
-        attacks += BitCount((EvalBoard->bbPieces[BISHOP][WHITE] | EvalBoard->bbPieces[QUEEN][WHITE]) & bbDiagonalMoves[square]);
+        king_sq_attacks = 0;
+        if (square == bksq)
+            bKingSq = TRUE;
 
-        // add straight attacks with rook and queen
-        attacks += BitCount((EvalBoard->bbPieces[ROOK][WHITE] | EvalBoard->bbPieces[QUEEN][WHITE]) & bbStraightMoves[square]);
+        // add attacks with queen
+        attacks = BitCount(EvalBoard->bbPieces[QUEEN][WHITE] & bbDiagonalMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval += attacks * Q_ATTACKER;
+        attacks = BitCount(EvalBoard->bbPieces[QUEEN][WHITE] & bbStraightMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval += attacks * Q_ATTACKER;
+
+        // add attacks with rook
+        attacks = BitCount(EvalBoard->bbPieces[ROOK][WHITE] & bbStraightMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval += attacks * R_ATTACKER;
+
+        // add attacks with bishop
+        attacks = BitCount(EvalBoard->bbPieces[BISHOP][WHITE] & bbDiagonalMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval += attacks * B_ATTACKER;
 
         // add knight attacks
-        attacks += BitCount(EvalBoard->bbPieces[KNIGHT][WHITE] & bbKnightMoves[square]);
+        attacks = BitCount(EvalBoard->bbPieces[KNIGHT][WHITE] & bbKnightMoves[square]);
+        if (bKingSq)
+            king_sq_attacks += attacks;
+        mgEval += attacks * N_ATTACKER;
 
-        // double the penalty for direct attacks on the king
-        mgEval += attacks * KING_ATTACKER;
-        if (square == bksq)
-            mgEval += attacks * KING_ATTACKER;
+        if (bKingSq)
+            mgEval += king_sq_attacks * KING_SQ_ATTACKER;
     }
 
     if (bEval)
@@ -1105,13 +1222,13 @@ FullEval:
 
 #if KING_AND_MINOR_DRAW	// this may be true in normal play, but not in some studies. Hence the compiler switch
     // Winning side has only one minor -- no better than draw
-    if ((nEval > 0) && (BitCount(EvalBoard->bbPieces[KNIGHT][WHITE] | BitCount(EvalBoard->bbPieces[BISHOP][WHITE])) == 1) &&
+    if ((nEval > 0) && (BitCount(EvalBoard->bbPieces[KNIGHT][WHITE] | EvalBoard->bbPieces[BISHOP][WHITE]) == 1) &&
         ((EvalBoard->bbMaterial[WHITE]) == (EvalBoard->bbPieces[KNIGHT][WHITE] | EvalBoard->bbPieces[BISHOP][WHITE] | EvalBoard->bbPieces[KING][WHITE])))
     {
         nEval = 0;
         goto exit;
     }
-    if ((nEval < 0) && (BitCount(EvalBoard->bbPieces[KNIGHT][BLACK] | BitCount(EvalBoard->bbPieces[BISHOP][BLACK])) == 1) &&
+    if ((nEval < 0) && (BitCount(EvalBoard->bbPieces[KNIGHT][BLACK] | EvalBoard->bbPieces[BISHOP][BLACK]) == 1) &&
         ((EvalBoard->bbMaterial[BLACK]) == (EvalBoard->bbPieces[KNIGHT][BLACK] | EvalBoard->bbPieces[BISHOP][BLACK] | EvalBoard->bbPieces[KING][BLACK])))
     {
         nEval = 0;
@@ -1285,7 +1402,11 @@ double EPDTune(char* filename, double K)
         // get game result
         if (strstr(pos, "1-0"))
             R = 1.0;
+        else if (strstr(pos, "1.0"))
+            R = 1.0;
         else if (strstr(pos, "1/2"))
+            R = 0.5;
+        else if (strstr(pos, "0.5"))
             R = 0.5;
         else
             R = 0.0;

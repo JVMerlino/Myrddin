@@ -46,3 +46,4 @@ unsigned long long doBBPerft(int depth, BB_BOARD *Board, BOOL bDivide);
 int		Think(int nDepth);
 void	ClearHistory(void);
 void	ClearKillers(BOOL bScoreOnly);
+void    InitThink(void);

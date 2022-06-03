@@ -24,7 +24,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Hash.h"
 #include "PArray.inc"
 
-#define LOG_HASH		TRUE
+#define LOG_HASH		FALSE
 #define ALWAYS_REPLACE	TRUE
 #define USE_INTERLOCKED FALSE
 #define HASH_AGING_FACTOR	4	// min number of plies difference between stored and incoming entry, including hash age
@@ -114,15 +114,15 @@ void SaveHash(CHESSMOVE *cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, P
     // ALWAYS REPLACE if depth is equal or larger or if the data is for the same position
     if ((pEntry->h.nDepth <= nDepth) /* || pEntry->h.dwSignature == dwSignature */)
         goto Replace;
-//	else
-//		return;
+	else
+		return;
 
+#if 0
     // stored hash entry is exact (but is for a different position)
     // stored entry has no move and we have an incoming move
     if ((pEntry->h.from == NO_SQUARE) && cmMove)
         goto Replace;
 
-#if 0
     if (pEntry->nFlags & HASH_EXACT)
     {
         // replace only if stored entry is not within aging factor of incoming entry
@@ -200,7 +200,7 @@ PAWN_HASH_ENTRY	*ProbePawnHash(PosSignature dwSignature)
     PosSignature	index = dwSignature & (dwPawnHashSize - 1);
     PAWN_HASH_ENTRY *pEntry = PawnHashTable + index;
 
-#if LOG_HASH
+#if 0 // LOG_HASH
     if (bLog)
         nHashProbes++;
 #endif
@@ -208,7 +208,7 @@ PAWN_HASH_ENTRY	*ProbePawnHash(PosSignature dwSignature)
     if (pEntry->dwSignature == dwSignature)
     {
         // verify that the position is identical
-#if LOG_HASH
+#if 0 // LOG_HASH
         if (bLog)
             nHashHits++;
 #endif
@@ -228,7 +228,7 @@ void SavePawnHash(int mgEval, int egEval, PosSignature dwSignature)
     if (PawnHashTable == NULL)
         return;
 
-#if LOG_HASH
+#if 0 // LOG_HASH
     if (bLog)
         nHashSaves++;
 #endif
@@ -238,7 +238,7 @@ void SavePawnHash(int mgEval, int egEval, PosSignature dwSignature)
 
     if (dwSignature == pEntry->dwSignature)
     {
-#if LOG_HASH
+#if 0 // LOG_HASH
         if (bLog)
             nHashBails++;
 #endif
@@ -266,7 +266,7 @@ EVAL_HASH_ENTRY *	ProbeEvalHash(PosSignature dwSignature)
     if (EvalHashTable == NULL)
         return(NULL);
 
-#if LOG_HASH
+#if 0 // LOG_HASH
     nEvalHashProbes++;
 #endif
 
@@ -275,7 +275,7 @@ EVAL_HASH_ENTRY *	ProbeEvalHash(PosSignature dwSignature)
 
     if (pEntry->dwSignature == dwSignature)
     {
-#if LOG_HASH
+#if 0 // LOG_HASH
         nEvalHashHits++;
 #endif
         return pEntry;
@@ -298,7 +298,7 @@ void SaveEvalHash(int nEval, PosSignature dwSignature)
 
     if (pEntry->dwSignature != dwSignature)
     {
-#if LOG_HASH
+#if 0 // LOG_HASH
         nEvalHashSaves++;
 #endif
 #if USE_INTERLOCKED
@@ -309,7 +309,7 @@ void SaveEvalHash(int nEval, PosSignature dwSignature)
 		pEntry->dwSignature = dwSignature;
 #endif
     }
-#if LOG_HASH
+#if 0 // LOG_HASH
     else
         nEvalHashBails++;
 #endif
@@ -521,14 +521,9 @@ void CloseHash(void)
 #if LOG_HASH
     if (bLog)
     {
-        fprintf(logfile, "Hash Stats: Saves = %d, Bails = %d, Probes = %d, Hits = %d, Returns = %d, Zeroes = %d\n",
+        printf("Hash Stats: Saves = %d, Bails = %d, Probes = %d, Hits = %d, Returns = %d, Zeroes = %d\n",
                 nHashSaves, nHashBails, nHashProbes, nHashHits, nHashReturns, nHashZeroes);
     }
-#if USE_EVAL_HASH
-    if (bLog)
-        fprintf(logfile, "Eval Hash Stats: Saves = %d, Bails = %d, Probes = %d, Hits = %d\n",
-                nHashSaves, nHashBails, nHashProbes, nHashHits);
-#endif
 #endif
 
 #if USE_SMP
@@ -583,8 +578,8 @@ PosSignature GetBBSignature(BB_BOARD *bbBoard)
 }
 
 /*========================================================================
-** GetBBSignature -- get the Zobrist hash signature of a pawn structure
-** and all other pieces related to the pawn hash (Kings, Rooks and Queens)
+** GetBBPawnSignature -- get the Zobrist hash signature of a pawn structure
+** and all other pieces related to the pawn hash (just Kings at this time)
 **========================================================================
 */
 PosSignature GetBBPawnSignature(BB_BOARD *bbBoard)

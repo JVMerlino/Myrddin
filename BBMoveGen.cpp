@@ -27,6 +27,8 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "parray.inc"
 #include "FEN.h"
 
+#define FLAG_CHECKS FALSE    // Wish I could set it to FALSE but can't make it work!
+
 int nPiecePhaseVals[NPIECES] = {0, QUEEN_PHASE, ROOK_PHASE, MINOR_PHASE, MINOR_PHASE, PAWN_PHASE}; 
 
 #if VERIFY_BOARD
@@ -156,6 +158,7 @@ int	BBScoreCapture(PieceType Capturer, PieceType Captured)
     assert(Captured >= QUEEN && Captured <= PAWN);	// don't allow king captures? IS_PIECE_OK(Captured);
 
     return(CAPTURE_SORT_VAL + (nPieceVals[Captured] * 16) - nPieceVals[Capturer]);
+
 }
 
 /*========================================================================
@@ -477,11 +480,13 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
 
         if (GetAttackers(Board, newkingsquare, OPPONENT(color), TRUE))	// move left king in check, so it is illegal
             legal_move_list[x].moveflag |= MOVE_REJECTED;
+#if FLAG_CHECKS
         else
         {
             if (BBKingInDanger(Board, OPPONENT(color)))
                 legal_move_list[x].moveflag |= MOVE_CHECK;
         }
+#endif
 
         // put the bitboards back
         RemovePiece(Board, to);
@@ -573,7 +578,7 @@ void BBUpdateCastleStatus(BB_BOARD *Board, SquareType from, SquareType to)
 ** MakeMove - makes move and returns captured piece if any
 **========================================================================
 */
-PieceType BBMakeMove(CHESSMOVE *move_to_make, BB_BOARD *Board)
+PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
 {
     assert(move_to_make);
     assert(Board);
@@ -611,7 +616,7 @@ PieceType BBMakeMove(CHESSMOVE *move_to_make, BB_BOARD *Board)
     if (my_color == XBLACK)
         pFromIndex += 6;
 
-	assert(pFromIndex >= 0 && pFromIndex < 12);
+    assert(pFromIndex >= 0 && pFromIndex < 12);
 
     dwSignature ^= aPArray[pFromIndex][from];
     dwSignature ^= aPArray[pFromIndex][to];
@@ -621,7 +626,7 @@ PieceType BBMakeMove(CHESSMOVE *move_to_make, BB_BOARD *Board)
         pToIndex = PIECEOF(captured_piece);
         if (COLOROF(captured_piece) == XBLACK)
             pToIndex += 6;
-    	assert(pToIndex >= 0 && pToIndex < 12);
+        assert(pToIndex >= 0 && pToIndex < 12);
         dwSignature ^= aPArray[pToIndex][to];
     }
 
@@ -700,16 +705,18 @@ PieceType BBMakeMove(CHESSMOVE *move_to_make, BB_BOARD *Board)
             dwSignature ^= aPArray[pIndex][to - 2];
             dwSignature ^= aPArray[pIndex][from - 1];
 
-			piece = RemovePiece(Board, to - 2);
+            piece = RemovePiece(Board, to - 2);
             PutPiece(Board, piece, from - 1);
         }
     }
 
+#if FLAG_CHECKS
     // update check status
     if (moveflag & MOVE_CHECK)
         Board->inCheck = TRUE;
     else
         Board->inCheck = FALSE;
+#endif
 
     // update castle status
     if (Board->castles)
@@ -739,6 +746,12 @@ PieceType BBMakeMove(CHESSMOVE *move_to_make, BB_BOARD *Board)
         PutPiece(Board, my_color | (moveflag & MOVE_PIECEMASK), to);
         Board->phase += (nPiecePhaseVals[PIECEOF(moveflag & MOVE_PIECEMASK)]);
     }
+
+#if !FLAG_CHECKS
+    Board->inCheck = BBKingInDanger(Board, OPPONENT(Board->sidetomove));
+    if (Board->inCheck)
+        move_to_make->moveflag |= MOVE_CHECK;
+#endif
 
     Board->sidetomove = OPPONENT(Board->sidetomove);
 

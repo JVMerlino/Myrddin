@@ -43,45 +43,41 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #endif
 
 #define USE_PVS			    TRUE
-#define USE_IID				TRUE	
-#define USE_IIR             FALSE   
 #define USE_ASPIRATION		TRUE
+
+#define USE_IID				TRUE	// IID and IIR should never both be true!
+#define USE_IIR             FALSE   // clearly worse
 
 #define USE_HISTORY			TRUE
 #define USE_KILLERS			TRUE
 
 #define USE_NULL_MOVE		TRUE
-#if USE_NULL_MOVE
-#define USE_NULL_VERIFY		FALSE	// not helpful?
-#endif
 
 #define USE_LMR				TRUE
 #if USE_LMR
 #define USE_AGGRESSIVE_LMR	TRUE
 #endif
-#define USE_LMP				FALSE	// worse?
+#define USE_LMP				FALSE
 #define USE_EXTENSIONS		TRUE
-#define USE_PRUNING			TRUE
+#define USE_PRUNING			TRUE    // aka razoring
+#define USE_MATE_DISTANCE_PRUNING   TRUE
 
-#define USE_SEE				TRUE
+#define USE_SEE				TRUE    // maybe worse?
 #define USE_SEE_MOVE_ORDER	FALSE	// not helpful
 
 #define USE_SMP				TRUE
 #if USE_SMP
-#define DEBUG_SMP			FALSE	// debugging only!
+#define DEBUG_SMP			FALSE	// adds lots of logging!
 #endif
+
+#define USE_EGTB			TRUE
 
 #ifdef _DEBUG
-#ifdef WIN64
-#define USE_EGTB			TRUE
+#define VERIFY_BOARD		TRUE
+// #define assert(x)                // uncomment this if profiling!
 #else
-#define USE_EGTB			FALSE
+#define VERIFY_BOARD        FALSE
 #endif
-#else
-#define USE_EGTB			TRUE
-#endif
-
-#define VERIFY_BOARD		FALSE
 
 #ifndef _MSC_VER
 #define max(a,b) ((a) < (b) ? (b) : (a))
@@ -93,26 +89,15 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define MAX_DEPTH			(128)
 #define MAX_EXT_DEPTH		(10)	// how much has this line been extended past original search depth, remembering that reductions take away from the extension depth
 #define MAX_QUIESCE_DEPTH	(MAX_DEPTH)
-#define MAX_REDUCTIONS		((nEvalPly / 3)	+ 1) // max reductions that can be applied to any branch
-#define MAX_NULL_MOVES		(10)
 #define MAX_KILLERS			(2)
 
 #define INFINITY			0x8000
 #define CHECKMATE			0x7FFF
 #define NO_EVAL				0xDEAD
 
-#define MAX_ASPIRATION_SEARCHES	11	// should ideally be an odd number, don't ask why
+#define MAX_ASPIRATION_SEARCHES	7	// should ideally be an odd number, don't ask why
 
-#if (MAX_ASPIRATION_SEARCHES <= 3)
-#define ASPIRATION_WINDOW	40
-#define ASPIRATION_WINDOW_2	110
-#elif (MAX_ASPIRATION_SEARCHES <= 9)
-#define ASPIRATION_WINDOW	25
-#define ASPIRATION_WINDOW_2	50
-#else
 #define ASPIRATION_WINDOW	16
-#define ASPIRATION_WINDOW_2	32
-#endif
 
 #define NCOLORS	2
 #define NPIECES	6
@@ -158,8 +143,6 @@ typedef unsigned long long	PosSignature;
 #define MINOR_VAL	320
 #define PAWN_VAL	100
 
-#define TOTAL_STARTING_WOOD	(QUEEN_VAL + (ROOK_VAL * 2) + (MINOR_VAL * 4) + (PAWN_VAL * 8))
-
 #define WHITE_PAWN		(0x15)
 #define WHITE_KNIGHT	(0x14)
 #define WHITE_BISHOP	(0x13)
@@ -185,10 +168,6 @@ typedef unsigned long long	PosSignature;
 #define  MAX_MOVE_LIST          (1024)
 #define  MAX_LEGAL_MOVES        (219)	// the actual known number for a constructed position is 218
 #define  MOVESTRLEN             (20)
-
-#define	 FUTILITY_MARGIN	(MINOR_VAL)
-#define	 R_FUTILITY_MARGIN	(ROOK_VAL)
-#define  Q_FUTILITY_MARGIN	(QUEEN_VAL)
 
 // these are for two-dimensional arrays where the first dimension is the color
 #define	WHITE			(0)
@@ -284,6 +263,7 @@ extern unsigned int nThinkTime, nPonderTime;
 extern clock_t      nThinkStart;
 extern int			nClockRemaining;
 extern unsigned int nCheckNodes;	// number of nodes to search before checking time management
+extern int          LMRReductions[32][32];
 extern CHESSMOVE	cmBestMove, cmPonderMove;
 extern FILE		   *logfile;
 

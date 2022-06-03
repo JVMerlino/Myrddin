@@ -67,6 +67,12 @@ extern Bitboard Bit[64];
 extern BOOL		bPopcnt;
 
 // common inline functions
+__inline DWORD BitScan(Bitboard bb)
+{
+    assert(bb);
+    return(DWORD)(_tzcnt_u64(bb));
+}
+
 __inline int File(int sq)  // return FILE_A -> FILE_H
 {
 	IS_SQ_OK(sq);
