@@ -11,7 +11,7 @@ NOT included in this repository is the code by Miguel Ballicora to support Gavio
 
 If, for some reason, you want to compile this code, be sure to set your project to allow LOTS of stack - like 10MB. Otherwise, Myrddin will crash on extremely deep positions like Fine 70. You've been warned.
 
-Myrddin Version 0.89 plays approximately 2610 ELO (CCRL - https://ccrl.chessdom.com/ccrl/4040/rating_list_all.html) at 1 CPU and 2700 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 50 points compared to version 0.88.
+Myrddin Version 0.89 plays approximately 2600 ELO (CCRL - https://ccrl.chessdom.com/ccrl/4040/rating_list_all.html) at 1 CPU and 2680 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 40 points compared to version 0.88.
 
 The following winboard commands are supported:
 - protover
