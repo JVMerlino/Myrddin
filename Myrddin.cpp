@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 // Ron Murawski -- Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's site)
 // Martin Sedlak -- Cheng (guided me through tuning)
 // Lars Hallerstrom - The Mad Tester!
-// Dann Corbit (helped bring the first bitboard version to release)
-// Bruce Moreland -- Gerbil (well-documented and explained code on his website taught me the basics)
+// Dann Corbit (helped bring the first bitboard version of Myrddin to release)
+// Bruce Moreland -- Gerbil (well-documented code on his website taught me the basics)
 // Tom Kerrigan -- TSCP (a great starting point)
 // Dr. Robert Hyatt -- Crafty (helped us all)
 // Ed Schröder and Jeroen Noomen -- ProDeo Opening Book
@@ -31,29 +31,29 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 // The Chessmaster Team -- Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// Added Mate Distance Pruning
-// Late Move Reductions are now more aggressive and use a logarithmic formula
-// Bad captures are now subject to LMR
-// Moved killer moves before equal captures in move ordering
-// Moved bad captures after quiet moves in move ordering
-// Moves that give check are no longer flagged as such at move generation, but instead during MakeMove()
-// Reduced the number of fail high/low results at the root before searching on full-width window
-// BitScan now uses an intrinsic function rather than MS Windows' BitScanForward64() - thank you to Pawel Osikowski and Bo Persson for the suggestion!
-// Null Move now uses a reduction of 3+(depth/6) instead of just 3
-// Myrddin will now move instantly if TBs are available and <=5 men on board. Previously it would "search" all the way to max depth (128) before moving, causing potential buffer problems with some GUIs at very fast time controls.
-// Minor evaluation tuning adjustments, most notably adding code for Bishop Outposts and a significant increase for pawns on the 7th rank
-// Increased the aggressiveness of SMP depth adjustment for child processes
+// fixed two bugs in SEE (stopped the calculation if the first capture was of equal value, and failed to include Kings in the calculation)
+// fixed a bug that could cause a save to the hash table even if there was no best move
+// tuned PST files for the first time, and re-tuned all other eval terms
+// captures with negative SEE value can now be reduced
+// IID is now more aggressive in its depth reduction and can be applied in PV nodes
+// LMR reduction is now one depth less for PV nodes
+// no longer limiting the number of extensions for a single branch
+// reduced the number of aspiration windows before performing a full-width search from six to two
+// fixed a rare bug such that if a tt probe or IID returned an underpromotion it would not be moved to the front of the movelist
+// fixed an issue when receiving the "force" command while pondering, which can happen with some GUIs
+// various minor optimizations
+// added "see" command to return the SEE value of a capture on the current position - example usage "see d4 e5"
+// added "rpt" command to run a brief perft test (perft uses bulk counting)
+// removed "-64" from version string as there is no longer a 32-bit version
 //
-// TODO -- In no particular order
-// Get pondering move after fail high
-// move ordering http://talkchess.com/forum3/viewtopic.php?f=7&t=77952&sid=b2e0af4a4211140d66e515b962f22308&start=10
+// TODO -- in no particular order
+// get pondering move after search ends with a fail
 
-#include <stdio.h>
 #include <conio.h>
 #include <signal.h>
 #include <direct.h>
-#include <stdlib.h>
-#include <string.h>
+#include <sys/types.h>
+#include <sys/timeb.h>
 #include "myrddin.h"
 #include "Bitboards.h"
 #include "movegen.h"
@@ -66,12 +66,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include "gtb-probe.h"
 #include "magicmoves.h"
 
-#ifdef WIN64
-char	*szVersion = "Myrddin 0.88h-64";
-#else
-char	*szVersion = "Myrddin 0.88-32";
-#endif
-char	*szInfo = "(5/30/22)";
+char	*szVersion = "Myrddin 0.90";
+char	*szInfo = "(6/9/23)";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
@@ -86,6 +82,7 @@ char			szEGTBPath[MAX_PATH];
 BOOL			bNoTB = FALSE;
 int				nResignVal = 0, nResignMoves = 0;
 
+// other (evil) globals
 unsigned int	nGameMove;
 int				nDepth, nThinkDepth, nPrevPVEval;
 int				nCompSide;
@@ -93,15 +90,15 @@ unsigned int	nThinkTime, nPonderTime, nFischerInc, nLevelMoves, nMovesBeforeCont
 int				nClockRemaining;	// needs to be signed because it can be temporarily negative when calculating time to think
 unsigned int	nCheckNodes;
 CHESSMOVE		cmBestMove, cmPonderMove;
+BB_BOARD		bbPonderRestore;
 clock_t			nThinkStart;
 BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth, bTuning;
 int				nEngineMode, nEngineCommand;
-PosSignature	dwEvalSignature, dwInitialPosSignature;
+PosSignature	dwInitialPosSignature;
 FILE		   *logfile;
 char			line[512], command[512];
 int				is_pipe = 0;
 HANDLE			input_handle = 0;
-
 int				nSlaveNum = -1;
 
 #if USE_SMP
@@ -116,6 +113,19 @@ PROCESS_INFORMATION	pi[MAX_CPUS];
 #endif
 
 PieceType		BackRank[BSIZE] = {ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK};
+
+// tuning data
+#if USE_GRANT_SET
+double  K = 1.1871;
+char TuningFile[32] = "granttuning.epd";
+#elif USE_LICHESS_SET
+double  K = 1.3118;
+char TuningFile[32] = "lichess-big3-resolved.epd";
+#else
+double  K = 1.3931;
+char TuningFile[32] = "quiet-labeled.epd";
+#endif
+
 
 #if USE_SMP
 /*========================================================================
@@ -173,6 +183,27 @@ void ZeroSlaveNodes(void)
 		smSharedMem->sdSlaveData[x].nSearchNodes = 0;
 }
 #endif
+
+/*========================================================================
+** LogPST - prints the PST tables to the logfile
+**========================================================================
+*/
+void LogPST(void)
+{
+	int x, y;
+
+	for (x = 0; x < 14; x++)
+	{
+		fprintf(logfile, "{");
+		for (y = 0; y < 64; y++)
+		{
+			if (y % 8 == 0)
+				fprintf(logfile, "\n\t");
+			fprintf(logfile, "%3d, ", PST[x][y]);
+		}
+		fprintf(logfile, "\n},\n");
+	}
+}
 
 /*========================================================================
 ** ParseIniFile -- Handle commands from the initialization file
@@ -478,6 +509,36 @@ char *MoveToString(char *moveString, CHESSMOVE *move, BOOL bAddMove)
     return(moveString);
 }
 
+char* PVMoveToString(char* moveString, PVMOVE* move, BOOL bAddMove)
+{
+	sprintf(moveString, "%s%c%c%c%c", (bAddMove ? "move " : ""),
+		BBSQ2COLNAME(move->fsquare), BBSQ2ROWNAME(move->fsquare),
+		BBSQ2COLNAME(move->tsquare), BBSQ2ROWNAME(move->tsquare));
+
+	if (move->moveflag & MOVE_PROMOTED)
+	{
+		int promotedPiece = move->moveflag & MOVE_PIECEMASK;
+
+		switch (promotedPiece)
+		{
+		case QUEEN:
+			strcat(moveString, "Q");
+			break;
+		case ROOK:
+			strcat(moveString, "R");
+			break;
+		case BISHOP:
+			strcat(moveString, "B");
+			break;
+		case KNIGHT:
+			strcat(moveString, "N");
+			break;
+		}
+	}
+
+	return(moveString);
+}
+
 /*========================================================================
 ** bbNewGame -- Resets the game board to a new game in the initial position
 **========================================================================
@@ -499,7 +560,7 @@ void bbNewGame(BB_BOARD *bbBoard)
     ClearKillers(FALSE);
 #endif
 
-    memset(bbBoard, 0, sizeof(BB_BOARD));
+    ZeroMemory(bbBoard, sizeof(BB_BOARD));
 
     bbBoard->bbPieces[KING][WHITE] = Bit[BB_E1];
     bbBoard->bbPieces[KING][BLACK] = Bit[BB_E8];
@@ -524,7 +585,7 @@ void bbNewGame(BB_BOARD *bbBoard)
 
     bbBoard->bbOccupancy = BB_RANK_1 | BB_RANK_2 | BB_RANK_7 | BB_RANK_8;
 
-    memset(&bbBoard->squares, 0, sizeof(bbBoard->squares));
+    ZeroMemory(&bbBoard->squares, sizeof(bbBoard->squares));
     for (x = 0; x < 8; x++)
     {
         bbBoard->squares[x] = XBLACK|BackRank[x];
@@ -550,14 +611,14 @@ void bbNewGame(BB_BOARD *bbBoard)
     bbBoard->pawnsignature = GetBBPawnSignature(bbBoard);
 #endif
 
-    memset(cmGameMoveList, 0, sizeof(cmGameMoveList));
+    ZeroMemory(cmGameMoveList, sizeof(cmGameMoveList));
     nGameMove = 0;
 
     bInBook = TRUE;
     bComputer = FALSE;
 
     if (bKibitz)
-        printf("tellics kibitz Hello, this is Myrddin, a fledgling chess engine that plays around 2400 ELO. Thanks for playing!\n");
+        printf("tellics kibitz Hello, this is Myrddin, a fledgling chess engine that plays around 2600 ELO. Thanks for playing!\n");
 }
 
 /*========================================================================
@@ -643,8 +704,8 @@ void	HandleCommand(void)
             printf("feature done=0\n");
             printf("feature setboard=1 playother=1 draw=0\n");
             printf("feature sigint=0 sigterm=0 reuse=0 analyze=1\n");
-            printf("feature variants=normal\n");
-            printf("feature myname=\"%s\"\n", szVersion);
+			printf("feature variants=normal\n");
+			printf("feature myname=\"%s\"\n", szVersion);
             printf("feature done=1\n");
             fflush(stdout);
         }
@@ -695,7 +756,6 @@ void	HandleCommand(void)
 
     if (!strcmp(command, "setboard") || !strcmp(command, "loadfen"))
     {
-        int		moveNumber;
         char   *c;
 
 #if USE_SMP
@@ -724,7 +784,7 @@ void	HandleCommand(void)
             *c = '\0';
 
         bbNewGame(&bbBoard);
-        if (BBForsytheToBoard(line + 9, &bbBoard, &moveNumber) == -1)
+        if (BBForsytheToBoard(line + 9, &bbBoard) == -1)
 		{
 			printf("Error parsing FEN %s\nstarting new game\n", line + 9);
 			bbNewGame(&bbBoard);
@@ -748,7 +808,7 @@ void	HandleCommand(void)
 
         nCompSide = NO_SIDE;
         if (nEngineMode != ENGINE_ANALYZING)
-        PromptForInput();
+			PromptForInput();
 
         if (bLog)
 			fprintf(logfile, "< Finished setboard\n");
@@ -814,7 +874,15 @@ void	HandleCommand(void)
 
         starttime = GetTickCount();
         nPerftMoves = doBBPerft(depth, &bbBoard, FALSE);
-        printf("perft %d = %I64u in time %ld\n", depth, nPerftMoves, GetTickCount() - starttime);
+#if USE_BULK_COUNTING
+        printf("Using bulk counting... ");
+#endif
+
+        printf("perft %d = %I64u in %.2f seconds\n", depth, nPerftMoves, (float)((GetTickCount() - starttime)) / 1000);
+
+#if !USE_BULK_COUNTING
+        printf("%ld KNPS\n", nPerftMoves / (GetTickCount() - starttime));
+#endif
 
         PromptForInput();
         return;
@@ -839,13 +907,55 @@ void	HandleCommand(void)
 
         sscanf(line, "%s %d", command, &depth);
 
-        starttime = GetTickCount();
+#if USE_BULK_COUNTING
+		printf("Using bulk counting...\n");
+#endif
+		starttime = GetTickCount();
         nPerftMoves = doBBPerft(depth, &bbBoard, TRUE);
-        printf("perft %d = %I64u in time %ld\n", depth, nPerftMoves, GetTickCount() - starttime);
+        printf("perft %d = %I64u in time %.2f\n", depth, nPerftMoves, (float)((GetTickCount() - starttime)) / 1000);
 
         PromptForInput();
         return;
     }
+
+	if (!strcmp(command, "rpt"))	// run perft test
+	{
+#if USE_SMP
+		if (bSlave)
+			return;
+#endif
+		int x;
+		clock_t alltime, starttime;
+
+#if USE_BULK_COUNTING
+		printf("Using bulk counting...\n");
+#endif
+		alltime = GetTickCount();
+		for (x = 0; x < NUM_PERFT_TESTS; x++)
+		{
+			bbNewGame(&bbBoard);
+			BBForsytheToBoard(perft_tests[x].fen, &bbBoard);
+			bbBoard.inCheck = BBKingInDanger(&bbBoard, bbBoard.sidetomove);
+			dwInitialPosSignature = bbBoard.signature = GetBBSignature(&bbBoard);
+#if USE_PAWN_HASH
+			bbBoard.pawnsignature = GetBBPawnSignature(&bbBoard);
+#endif
+
+			printf("%d) %s - ", x+1, perft_tests[x].fen);
+			starttime = GetTickCount();
+			nPerftMoves = doBBPerft(perft_tests[x].depth, &bbBoard, FALSE);
+
+			printf("perft %d = %I64u in %.2f seconds - ", perft_tests[x].depth, nPerftMoves, (float)((GetTickCount() - starttime)) / 1000);
+			if (nPerftMoves != perft_tests[x].value)
+				printf("FAILED! Should be %I64u\n", perft_tests[x].value);
+			else
+				printf("passed\n");
+		}
+
+		printf("Total Time = %.2f seconds\n", (float)((GetTickCount() - alltime)) / 1000);
+		PromptForInput();
+		return;
+	}
 
     if (!strcmp(command, "eval"))
     {
@@ -890,58 +1000,142 @@ void	HandleCommand(void)
         return;
     }
 
-#if 0   // use huge epd file from Andrew Grant
-    if (!strcmp(command, "tune"))    // runs through epd file collecting static eval scores
+    if (!strcmp(command, "see"))
     {
-        double  K = 1.1464;
-        extern int mg, eg, og;
+        WORD		nNumMoves;
+        CHESSMOVE	cmSEEMoveList[MAX_LEGAL_MOVES];
+        char        from[3], to[3];
+        int         x, fsquare, tsquare;
 
-        for (mg = 0; mg <= 0; mg++)
-        {
-            for (eg = 0; eg <= 0; eg++)
-            {
-                for (og = 0; og <= 0; og++)
-                {
-                    for (K = 1.1; K <= 1.2; K += 0.1)
-                    {
-                        bTuning = TRUE;
-                        printf("%d/%d/%d ", og, mg, eg);
-                        EPDTune("GrantTuning.epd", K);    // training set file
-                        bTuning = FALSE;
-                    }
-                }
-            }
-        }
-#else   // use small epd file from Alexandru Mosoi
-    if (!strcmp(command, "tune"))    // runs through epd file collecting static eval scores
-    {
-        double  K = 1.3706;
-        extern int mg, eg, og;
+        BBGenerateAllMoves(&bbBoard, cmSEEMoveList, &nNumMoves, FALSE);
 
-        for (mg = 0; mg <= 0; mg++)
+        sscanf(line, "%s %s %s", command, from, to);
+        fsquare = SqNameToSq(from);
+        tsquare = SqNameToSq(to);
+
+        for (x = 0; x < nNumMoves; x++)
         {
-            for (eg = 0; eg <= 0; eg++)
-            {
-                for (og = 0; og <= 0; og++)
-                {
-                    for (K = 1.361; K <= 1.363; K += 0.0001)
-                    {
-                        bTuning = TRUE;
-                        printf("%d/%d/%d, %f ", og, mg, eg, K);
-                        EPDTune("quiet-labeled.epd", K);    // training set file
-                        bTuning = FALSE;
-                    }
-                }
-            }
+            if ((cmSEEMoveList[x].fsquare == fsquare) && (cmSEEMoveList[x].tsquare == tsquare))
+                break;
         }
-#endif
+        if (x == nNumMoves)
+            printf("Move Not Found! %d moves, from=%d, to=%d\n", nNumMoves, fsquare, tsquare);
+        else
+        {
+            bbEvalBoard = bbBoard;
+            printf("SEE Val of %s%s = %d\n", from, to, BBSEEMove(&cmSEEMoveList[x], bbBoard.sidetomove));
+        }
 
         PromptForInput();
 
         return;
     }
 
-    if (!strcmp(command, "tb"))
+	// for hand-tuning non-PST eval terms
+    if (!strcmp(command, "tune"))
+    {
+		double	E;
+        extern int mg, eg, og;
+
+		bTuning = TRUE;
+		for (mg = 0; mg <= 0; mg++)
+        {
+            for (eg = 0; eg <= 0; eg++)
+            {
+                for (og = 0; og <= 0; og++)
+                {
+//                  for (K = 1.311; K <= 1.313; K += 0.0001)
+                    {
+                        printf("%d/%d/%d, %f ", og, mg, eg, K);
+						E = EPDTune(TuningFile, K);
+						printf("E = %f\n", E);
+                    }
+                }
+            }
+        }
+
+		bTuning = FALSE;
+		PromptForInput();
+
+        return;
+    }
+
+	// for automatically tuning all PST values
+	if (!strcmp(command, "tunepst"))
+	{
+		double	E, best;
+		int		inc, orig;
+		int		pst, sq;
+		BOOL	done;
+		char	sqname[8];
+
+		bTuning = TRUE;
+		best = EPDTune(TuningFile, K);
+		printf("original best = %f\n", best);
+
+		for (pst = 13; pst <= 13; pst++)
+		{
+			for (sq = 8; sq < 48; sq++)
+			{
+				printf("starting pst %d, sq %d at %d\n", pst, sq, PST[pst][sq]);
+				orig = PST[pst][sq];
+				done = FALSE;
+				inc = 1;	// start by increasing the val
+
+				while (!done)
+				{
+					PST[pst][sq] += inc;
+					printf("\t testing val %d = ", PST[pst][sq]);
+					E = EPDTune(TuningFile, K);
+					printf("%f\n", E);
+
+					if (E >= best)	// worse value
+					{
+						if (inc == 1)
+						{
+							if (PST[pst][sq] == orig + 1)
+							{
+								inc = -1;
+								PST[pst][sq] = orig;
+							}
+							else
+							{
+								PST[pst][sq]--;
+								done = TRUE;
+							}
+						}
+						else  // decreasing the val
+						{
+							if (PST[pst][sq] == orig - 1)
+							{
+								PST[pst][sq] = orig;
+								done = TRUE;
+							}
+							else
+							{
+								PST[pst][sq]++;
+								done = TRUE;
+							}
+						}
+					}
+					else
+						best = E;
+				}
+
+				printf("final val for %d, %d = %d\n", pst, sq, PST[pst][sq]);
+				BBSquareName(sq, sqname);
+				fprintf(logfile, "final val for %d, %s = %d\n", pst, sqname, PST[pst][sq]);
+			}
+		}
+
+		bTuning = FALSE;
+		LogPST();
+		PromptForInput();
+
+		return;
+	}
+
+	if (!strcmp(command, "tb"))
 	{
 #if USE_SMP
 		if (!bSlave)
@@ -1075,7 +1269,13 @@ void	HandleCommand(void)
 		}
 
         if ((nEngineMode == ENGINE_THINKING) || (nEngineMode == ENGINE_PONDERING))
-        nEngineCommand = STOP_THINKING;
+			nEngineCommand = STOP_THINKING;
+
+		if (nEngineMode == ENGINE_PONDERING)	// have to back out the pondering move before setting the engine idle
+		{
+			bbBoard = bbPonderRestore;
+			ZeroMemory(&cmGameMoveList[--nGameMove], sizeof(CHESSMOVE));
+		}
 
         nCompSide = NO_SIDE;
         PromptForInput();
@@ -1325,7 +1525,7 @@ void	HandleCommand(void)
         BBUnMakeMove(&cmGameMoveList[nGameMove-1], &bbBoard);
 
         // undo is permanent!
-        memset(&cmGameMoveList[--nGameMove], 0, sizeof(CHESSMOVE));
+        ZeroMemory(&cmGameMoveList[--nGameMove], sizeof(CHESSMOVE));
 
         nCompSide = NO_SIDE;
         if (nEngineMode != ENGINE_ANALYZING)
@@ -1479,22 +1679,22 @@ void	HandleCommand(void)
     }
 
     if (!strcmp(command, "otim") ||
-            !strcmp(command, "ping") ||
-            !strcmp(command, "random") ||
-            !strcmp(command, "accepted") ||
-            !strcmp(command, "rejected") ||
-            !strcmp(command, "variant") ||
-            !strcmp(command, "usermove") ||
-            !strcmp(command, "name") ||
-            !strcmp(command, "ics") ||
-            !strcmp(command, "pause") ||
-            !strcmp(command, "resume") ||
-            !strcmp(command, "rating") ||
-            !strcmp(command, "draw") ||
-            !strcmp(command, "remove") ||
-            !strcmp(command, "hint") ||
-            !strcmp(command, ".") ||
-            !strcmp(command, "edit"))
+        !strcmp(command, "ping") ||
+        !strcmp(command, "random") ||
+        !strcmp(command, "accepted") ||
+        !strcmp(command, "rejected") ||
+		!strcmp(command, "variant") ||
+		!strcmp(command, "usermove") ||
+        !strcmp(command, "name") ||
+        !strcmp(command, "ics") ||
+        !strcmp(command, "pause") ||
+        !strcmp(command, "resume") ||
+        !strcmp(command, "rating") ||
+        !strcmp(command, "draw") ||
+        !strcmp(command, "remove") ||
+        !strcmp(command, "hint") ||
+        !strcmp(command, ".") ||
+        !strcmp(command, "edit"))
     {
         if (bLog)
             fprintf(logfile, "< %s not supported\n", command);
@@ -1543,18 +1743,18 @@ void	HandleCommand(void)
                 fprintf(logfile, "Backing out the pondering move\n");
 
             // back out the pondering move
-            BBUnMakeMove(&cmPonderMove, &bbBoard);
-            memset(&cmGameMoveList[--nGameMove], 0, sizeof(CHESSMOVE));
+			bbBoard = bbPonderRestore;
+            ZeroMemory(&cmGameMoveList[--nGameMove], sizeof(CHESSMOVE));
         }
 
         BBGenerateAllMoves(&bbBoard, cmTempMoveList, &nNumMoves, FALSE);
 
         // compare the received move against all legal moves
-        for (n = 0; n < nNumMoves; n++)
+		for (n = 0; n < nNumMoves; n++)
         {
             MoveToString(moveString, &cmTempMoveList[n], FALSE);
 
-            if (!strnicmp(moveString, command, strlen(moveString)))	// we've found our move
+			if (!strnicmp(moveString, command, strlen(moveString)))	// we've found our move
             {
 #if USE_SMP
 				if (!bSlave)
@@ -1689,12 +1889,14 @@ void PrintPV(int nPVEval, int nSideToMove, char *comment, BOOL bPrintKibitz)
         if (nPVEval + n >= CHECKMATE)
             break;
 
-        MoveToString(moveString, &evalPV.pv[n], FALSE);
+        PVMoveToString(moveString, &evalPV.pv[n], FALSE);
         strcat(buf, moveString);
         if (n == 0)
             strncat(buf, comment, sizeof buf - strlen(buf));
         strcat(buf, " ");
-    }
+		if (*comment)
+			break;
+	}
 
     if ((GetTickCount() - nThinkStart) > 0)
     {
@@ -1730,6 +1932,10 @@ void PrintPV(int nPVEval, int nSideToMove, char *comment, BOOL bPrintKibitz)
     }
     if (bLog)
         fprintf(logfile, buf);
+
+#if SHOW_QS_NODES
+        printf("%12llu qnodes - %d pct\n", nQNodes, (nQNodes * 100 / nSearchNodes));
+#endif
 
     fflush(stdout);
 }
@@ -1798,6 +2004,15 @@ void KillProcesses(void)
 }
 #endif
 
+void cleanup(void)
+{
+	if (bLog)
+	{
+		fflush(logfile);
+		fclose(logfile);
+	}
+}
+
 /*========================================================================
 ** main - initialize and main loop handling console input/output and calls
 ** to search
@@ -1825,19 +2040,25 @@ int main(void)
 #endif
     ParseIniFile();
 
+	atexit(cleanup);
+
     if (bLog)
     {
         char	fn[32];
-        time_t	t;
+		_timeb  tb;
 
         _mkdir("logs");
-        sprintf(fn, "logs\\Myrddin-%lld-%s%d.log", (long long) time(&t), (bSlave ? "slave" : ""), nSlaveNum+1);
+		_ftime(&tb);
+		sprintf(fn, "logs\\Myrddin-%lld-%d-%s%d.log", (long long) tb.time, tb.millitm, (bSlave ? "slave" : ""), nSlaveNum+1);
         logfile = fopen(fn, "w+");
 
         if (!logfile)
             bLog = FALSE;
-        else
-            fprintf(logfile, "log=%d, kibitz=%d, resign=%d, hashsize=%lld, egtbcomp=%d, egtbfolder=%s, cores=%d\n", bLog, bKibitz, nResignVal, dwHashSize, nEGTBCompressionType, szEGTBPath, nCPUs);
+		else
+		{
+			fprintf(logfile, "%s - %-14s\n", szVersion, szInfo);
+			fprintf(logfile, "log=%d, kibitz=%d, resign=%d, hashsize=%lld, egtbcomp=%d, egtbfolder=%s, cores=%d\n", bLog, bKibitz, nResignVal, dwHashSize, nEGTBCompressionType, szEGTBPath, nCPUs);
+		}
     }
 
     bPost = TRUE;		// only for debugging convenience, should be OFF by default, but most engines seem to do this anyway
@@ -1853,18 +2074,11 @@ int main(void)
 	if (!bSlave)
 	{
 		printf("\n");
-		printf("#--------------------------------#\n");
-		printf("# %s - %-12s #\n", szVersion, szInfo);
-		printf("# Copyright 2021 - John Merlino  #\n");
-#ifdef WIN64
-	    printf("# 64-bit version                 #\n");
-#else
-#ifdef WIN32
-		printf("# 32-bit version                 #\n");
-#endif
-#endif
-		printf("# All Rights Reserved            #\n");
-		printf("#--------------------------------#\n\n");
+		printf("#-------------------------------#\n");
+		printf("# %s - %-14s #\n", szVersion, szInfo);
+		printf("# Copyright 2023 - John Merlino #\n");
+		printf("# All Rights Reserved           #\n");
+		printf("#-------------------------------#\n\n");
 		printf("feature done=0\n");	// just in case -- this shouldn't be harmful according to Tim Mann
 	}
 
@@ -1872,6 +2086,7 @@ int main(void)
     if (InitHash() == NULL)
     {
         printf("Unable to allocate hash table...exiting\n");
+		fprintf(logfile, "Unable to allocate hash table...exiting\n");
         return(0);
     }
 #endif
@@ -2011,6 +2226,9 @@ int main(void)
                 nDepth = 1;
                 nCurEval = nPrevEval = NO_EVAL;
                 nSearchNodes = 0;
+#if SHOW_QS_NODES
+                nQNodes = 0;
+#endif
 #if USE_SMP
 				ZeroSlaveNodes();
 #endif
@@ -2068,8 +2286,8 @@ int main(void)
                             if (bLog)
                                 fprintf(logfile, "backing out the pondering move because there is no legal reply\n");
 
-                            BBUnMakeMove(&cmPonderMove, &bbBoard);
-                            memset(&cmGameMoveList[--nGameMove], 0, sizeof(CHESSMOVE));
+							bbBoard = bbPonderRestore;
+                            ZeroMemory(&cmGameMoveList[--nGameMove], sizeof(CHESSMOVE));
                         }
 
                         if (nEngineMode == ENGINE_ANALYZING)
@@ -2267,8 +2485,12 @@ int main(void)
                 WORD		nNumMoves;
 
                 // make the expected reply on the game board (if there is an expected reply)
-                if (evalPV.pvLength > 1)
-                    cmPonderMove = evalPV.pv[1];
+				if (evalPV.pvLength > 1)
+				{
+					cmPonderMove.fsquare = evalPV.pv[1].fsquare;
+					cmPonderMove.tsquare = evalPV.pv[1].tsquare;
+					cmPonderMove.moveflag = evalPV.pv[1].moveflag;
+				}
                 else
                 {
                     // check to see if the previous PV has the same move AND has an expected reply
@@ -2277,8 +2499,10 @@ int main(void)
                         if ((evalPV.pv[0].fsquare == prevDepthPV.pv[0].fsquare) &&
                                 (evalPV.pv[0].tsquare == prevDepthPV.pv[0].tsquare))
                         {
-                            cmPonderMove = prevDepthPV.pv[1];
-                        }
+                            cmPonderMove.fsquare = prevDepthPV.pv[1].fsquare;
+							cmPonderMove.tsquare = prevDepthPV.pv[1].tsquare;
+							cmPonderMove.moveflag = prevDepthPV.pv[1].moveflag;
+						}
                     }
                     else
                     {
@@ -2288,6 +2512,9 @@ int main(void)
                         goto NoPonder;	// the PV has only one move in it, so there is no expected reply -- BAIL!
                     }
                 }
+
+				// save off the board so it can be restored after pondering is finished
+				bbPonderRestore = bbBoard;
 
                 BBMakeMove(&cmPonderMove, &bbBoard);
                 cmPonderMove.dwSignature = bbBoard.signature;
@@ -2304,8 +2531,8 @@ int main(void)
                 else
                 {
                     // back out the ponder move
-                    BBUnMakeMove(&cmPonderMove, &bbBoard);
-                    nGameMove--;
+					bbBoard = bbPonderRestore;
+					ZeroMemory(&cmGameMoveList[--nGameMove], sizeof(CHESSMOVE));
                 }
             }
 

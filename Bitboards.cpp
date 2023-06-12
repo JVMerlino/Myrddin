@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023 John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "magicmoves.h"
 #include "Myrddin.h"
 #include "Bitboards.h"
-#include "FEN.h"
+#include "Eval.h"
 
 BOOL		bPopcnt = FALSE;
 
@@ -32,6 +32,8 @@ Bitboard	bbPassedPawnMask[2][64];
 Bitboard	bbDiagonalMoves[64];
 Bitboard	bbStraightMoves[64];
 Bitboard	Bit[64];
+Bitboard	bbBetween[8][8];
+Bitboard	wkc, wqc, bkc, bqc;
 
 Bitboard RankMask[8] =
 {
@@ -43,40 +45,88 @@ Bitboard FileMask[8] =
     BB_FILE_A, BB_FILE_B, BB_FILE_C, BB_FILE_D, BB_FILE_E, BB_FILE_F, BB_FILE_G, BB_FILE_H
 };
 
+int VFlipSquare[64] = {
+	BB_A1, BB_B1, BB_C1, BB_D1, BB_E1, BB_F1, BB_G1, BB_H1,
+	BB_A2, BB_B2, BB_C2, BB_D2, BB_E2, BB_F2, BB_G2, BB_H2,
+	BB_A3, BB_B3, BB_C3, BB_D3, BB_E3, BB_F3, BB_G3, BB_H3,
+	BB_A4, BB_B4, BB_C4, BB_D4, BB_E4, BB_F4, BB_G4, BB_H4,
+	BB_A5, BB_B5, BB_C5, BB_D5, BB_E5, BB_F5, BB_G5, BB_H5,
+	BB_A6, BB_B6, BB_C6, BB_D6, BB_E6, BB_F6, BB_G6, BB_H6,
+	BB_A7, BB_B7, BB_C7, BB_D7, BB_E7, BB_F7, BB_G7, BB_H7,
+	BB_A8, BB_B8, BB_C8, BB_D8, BB_E8, BB_F8, BB_G8, BB_H8,
+};
+
 BB_BOARD	bbBoard;
 
-int RemovePiece(BB_BOARD *Board, int square)
+int RemovePiece(BB_BOARD* Board, int square, BOOL bUpdatePST)
 {
-    IS_SQ_OK(square);
-    assert(Board->squares[square]);
+	IS_SQ_OK(square);
+	assert(Board->squares[square]);
 
-    int	piece = Board->squares[square];
-    int color = COLOROF(piece) == XWHITE ? WHITE : BLACK;
+	int	piece = Board->squares[square];
+	int color = COLOROF(piece) == XWHITE ? WHITE : BLACK;
+	int pstpiece = PIECEOF(piece);
 
-    Board->squares[square] = EMPTY;
-    ClearBit(&Board->bbPieces[PIECEOF(piece)][color], square);
-    ClearBit(&Board->bbMaterial[color], square);
-    ClearBit(&Board->bbOccupancy, square);
+	Board->squares[square] = EMPTY;
+	ClearBit(&Board->bbPieces[pstpiece][color], square);
+	ClearBit(&Board->bbMaterial[color], square);
+	ClearBit(&Board->bbOccupancy, square);
 
-    return(piece);
+#if USE_INCREMENTAL_PST
+	if (bUpdatePST)
+	{
+		if (color == WHITE)
+		{
+			Board->mgPST -= PST[pstpiece][square];
+			Board->egPST -= PST[pstpiece + 6][square];
+		}
+		else
+		{
+			square = VFlipSquare[square];
+			Board->mgPST += PST[pstpiece][square];
+			Board->egPST += PST[pstpiece + 6][square];
+		}
+	}
+#endif
+
+	return(piece);
 }
 
-void PutPiece(BB_BOARD *Board, int piece, int square)
+void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdatePST)
 {
     IS_SQ_OK(square);
-    assert(Board->squares[square] == EMPTY);
+	assert(Board->squares[square] == EMPTY);
 
     int color = COLOROF(piece) == XWHITE ? WHITE : BLACK;
+	int pstpiece = PIECEOF(piece);
 
     Board->squares[square] = piece;
-    SetBit(&Board->bbPieces[PIECEOF(piece)][color], square);
+    SetBit(&Board->bbPieces[pstpiece][color], square);
     SetBit(&Board->bbMaterial[color], square);
     SetBit(&Board->bbOccupancy, square);
+
+#if USE_INCREMENTAL_PST
+	if (bUpdatePST)
+	{
+		if (color == WHITE)
+		{
+			Board->mgPST += PST[pstpiece][square];
+			Board->egPST += PST[pstpiece + 6][square];
+		}
+		else
+		{
+			square = VFlipSquare[square];
+			Board->mgPST -= PST[pstpiece][square];
+			Board->egPST -= PST[pstpiece + 6][square];
+		}
+	}
+#endif
 }
 
 void initbitboards(void)
 {
     int	sq;
+	int x, y;
 
     // bit array
     for (sq = 0; sq <= 63; sq++)
@@ -337,4 +387,36 @@ void initbitboards(void)
     // diagonal attacks
     for (sq = 0; sq <= 63; sq++)
         bbDiagonalMoves[sq] = Bmagic(sq, 0);
+
+	// bits between squares on a rank - used for determining FRC castling legality
+	for (x = 0; x <= 7; x++)
+	{
+		for (y = 0; y <= 7; y++)
+		{
+			if (abs(x - y) <= 1)
+			{
+				bbBetween[x][y] = BB_EMPTY;
+				continue;
+			}
+
+			if (y < x)
+			{
+				sq = y + 1;
+				while (sq < x)
+					SetBit(&bbBetween[x][y], sq++);
+			}
+			else
+			{
+				sq = x + 1;
+				while (sq < y)
+					SetBit(&bbBetween[x][y], sq++);
+			}
+		}
+	}
+
+	// masks for checking castling squares
+	wkc = Bit[BB_F1] | Bit[BB_G1];
+	wqc = Bit[BB_B1] | Bit[BB_C1] | Bit[BB_D1];
+	bkc = Bit[BB_F8] | Bit[BB_G8];
+	bqc = Bit[BB_B8] | Bit[BB_C8] | Bit[BB_D8];
 }

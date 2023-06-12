@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -42,23 +42,19 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define USE_EVAL_HASH		TRUE
 #endif
 
-#define USE_PVS			    TRUE
 #define USE_ASPIRATION		TRUE
 
-#define USE_IID				TRUE	// IID and IIR should never both be true!
-#define USE_IIR             FALSE   // clearly worse
+#define USE_IID				TRUE	
+#define USE_IIR             FALSE	
 
 #define USE_HISTORY			TRUE
 #define USE_KILLERS			TRUE
 
 #define USE_NULL_MOVE		TRUE
+#define USE_NULL_MOVE_VERIFICATION	FALSE
 
-#define USE_LMR				TRUE
-#if USE_LMR
 #define USE_AGGRESSIVE_LMR	TRUE
-#endif
 #define USE_LMP				FALSE
-#define USE_EXTENSIONS		TRUE
 #define USE_PRUNING			TRUE    // aka razoring
 #define USE_MATE_DISTANCE_PRUNING   TRUE
 
@@ -72,12 +68,25 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #define USE_EGTB			TRUE
 
+#define USE_INCREMENTAL_PST	FALSE
+
+#define USE_MATERIAL_IMBALANCE FALSE
+
 #ifdef _DEBUG
-#define VERIFY_BOARD		TRUE
-// #define assert(x)                // uncomment this if profiling!
+#define VERIFY_BOARD		FALSE
+#define assert(x)                // uncomment this if profiling!
 #else
 #define VERIFY_BOARD        FALSE
 #endif
+
+#define USE_FAST_EVAL       FALSE
+
+// tuning sets - one of these needs to be set to TRUE
+#define USE_GRANT_SET		FALSE	// one pass through the file takes 45 seconds - a full PST tuning pass takes 2-3 days
+#define USE_LICHESS_SET		TRUE	// one pass takes 11 seconds - a full pass takes 9-12 hours
+#define USE_QUIET_SET		FALSE	// one pass takes 4 seconds - a full pass takes 3-4 hours - NOT RECOMMENDED AS THIS IS NOT ENOUGH DATA
+
+#define SHOW_QS_NODES       FALSE
 
 #ifndef _MSC_VER
 #define max(a,b) ((a) < (b) ? (b) : (a))
@@ -87,15 +96,14 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define KING_AND_MINOR_DRAW TRUE	// change this to false if testing studies in which the side with only a minor can mate
 
 #define MAX_DEPTH			(128)
-#define MAX_EXT_DEPTH		(10)	// how much has this line been extended past original search depth, remembering that reductions take away from the extension depth
-#define MAX_QUIESCE_DEPTH	(MAX_DEPTH)
 #define MAX_KILLERS			(2)
 
 #define INFINITY			0x8000
 #define CHECKMATE			0x7FFF
 #define NO_EVAL				0xDEAD
+#define MATE_THREAT			0x4000
 
-#define MAX_ASPIRATION_SEARCHES	7	// should ideally be an odd number, don't ask why
+#define MAX_ASPIRATION_SEARCHES	3	// should ideally be an odd number, don't ask why
 
 #define ASPIRATION_WINDOW	16
 
@@ -167,7 +175,6 @@ typedef unsigned long long	PosSignature;
 #define  BSIZE                  (8)
 #define  MAX_MOVE_LIST          (1024)
 #define  MAX_LEGAL_MOVES        (219)	// the actual known number for a constructed position is 218
-#define  MOVESTRLEN             (20)
 
 // these are for two-dimensional arrays where the first dimension is the color
 #define	WHITE			(0)
@@ -201,10 +208,17 @@ typedef struct CHESSMOVE
     UNDOMOVE		save_undo;
 } CHESSMOVE;
 
+typedef struct PVMOVE
+{
+	MoveFlagType	moveflag;
+	SquareType		fsquare;
+	SquareType		tsquare;
+} PVMOVE;
+
 typedef struct PV
 {
     long		pvLength;
-    CHESSMOVE	pv[MAX_DEPTH];
+    PVMOVE		pv[MAX_DEPTH];
 } PV;
 
 extern BOOL			bSlave;
@@ -249,6 +263,17 @@ void SendSlavesString(char *szString);
 
 extern CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
+#define USE_BULK_COUNTING   TRUE    // for perft
+typedef struct
+{
+	char	fen[120];
+	int		depth;
+	DWORD	value;
+} PERFT_TEST;
+
+#define NUM_PERFT_TESTS	12
+extern PERFT_TEST	perft_tests[NUM_PERFT_TESTS];
+
 extern int		nEGTBCompressionType;
 extern char     szEGTBPath[MAX_PATH];
 
@@ -272,3 +297,4 @@ void 	HandleCommand(void);
 
 void	PrintPV(int nPVEval, int nSideToMove, char *comment, BOOL bPrintKibitz);
 char   *MoveToString(char *moveString, CHESSMOVE *move, BOOL bAddMove);
+char   *PVMoveToString(char* moveString, PVMOVE* move, BOOL bAddMove);

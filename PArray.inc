@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -235,6 +235,7 @@ static PosSignature aPArray[12][64] =	// one entry for each possible piece on ea
 	0xCA564CFB045F39A9ULL, 0xD9F283A8FF11E8C5ULL, 0x5A8A9B02A47B6C69ULL, 0x0AC5F58A7D6F526BULL, 
 	}
 };
+
 
 static PosSignature aSTMArray[NCOLORS] = {0xC86CD3E7759239D6ULL, 0xC24D2D2A3B71CD8DULL};	// side to move
 

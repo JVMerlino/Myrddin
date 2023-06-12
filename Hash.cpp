@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -16,11 +16,11 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
-#include <windows.h>
-#include <intrin.h>
+#include <sys/types.h>
+#include <sys/timeb.h>
+
 #include "Myrddin.h"
 #include "Bitboards.h"
-#include "Think.h"
 #include "Hash.h"
 #include "PArray.inc"
 
@@ -68,27 +68,16 @@ HASH_ENTRY *ProbeHash(PosSignature dwSignature)
         nHashProbes++;
 #endif
 
-    if ((pEntry->h.dwSignature == dwSignature) /* && (pEntry->h.nDepth >= nDepth) */)
+	if ((pEntry->h.dwSignature == dwSignature) /* && (pEntry->h.nDepth >= nDepth) */)
     {
-        // verify that the position is identical and was searched to at least the appropriate depth
 #if LOG_HASH
-        if (bLog)
-            nHashHits++;
+		if (bLog)
+			nHashHits++;
 #endif
-
         return pEntry;
-    }
+	}
     else
-    {
-#if LOG_HASH
-        if (bLog)
-        {
-            if (pEntry->h.nFlags == HASH_NOT_EVAL)
-                nHashZeroes++;
-        }
-#endif
         return NULL;
-    }
 }
 
 /*========================================================================
@@ -391,15 +380,17 @@ HASH_ENTRY* InitHash(void)
         unsigned long long b;
     } hilo;
 
-    if (!bSlave)
+	_timeb tb;
+
+	_ftime(&tb);
+	if (!bSlave)
     {
 		// create shared memory for slave processes (even if they're aren't any, because of the "cores" command)
-		time_t	t;
 		hilo h={0};
    		h.b = dwHashSize * sizeof (HASH_ENTRY) + dwPawnHashSize * sizeof (PAWN_HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY);
 
-		sprintf(szSharedHashName, "MSH-%lld", (long long) time(&t));
-		sprintf(szSharedMemName, "MSM-%lld", (long long) time(&t));
+		sprintf(szSharedHashName, "MSH-%lld-%d", (long long)tb.time, tb.millitm);
+		sprintf(szSharedMemName, "MSM-%lld-%d", (long long)tb.time, tb.millitm);
 		hSharedHash = CreateFileMapping(
 							INVALID_HANDLE_VALUE,    // use paging file
 							NULL,                    // default security

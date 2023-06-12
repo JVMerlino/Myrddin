@@ -1,53 +1,53 @@
-// test positions -- just copy and paste in the command window -- solve < 3m with PVs for 3 consecutive depths, and hold past 5s
-// for avoid move positions, must hold past 30s
-// 0.85 64-bit results first
-setboard 8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1 bm Kb1 (0.2s at d19)
-setboard 7k/3b3p/1p6/3p1P1P/2p3r1/2P1R3/7r/2RK4 b - - 0 40 bm Rg1, Ba4 -- announce Mate in 7 (0.04s)
-setboard r4r2/p1q1n1kp/2n1ppp1/8/3P2N1/3BPP2/2Q2P1P/R3K2R w KQ - 0 19  bm h3, h4 (0.7s)
-setboard 2q3k1/R2bprbp/3n2p1/3P4/P2NP3/5P2/1r3BPP/3Q1RK1 b - - 0 21 bm Nxe4 (0.7s)
-setboard R7/5k2/3p4/4p3/1P3p1R/8/2P4K/8 w - - 0 45 bm Rh6 -- announce Mate in 5 (0.8s)
-setboard 3q2k1/Q1p1bpp1/2P1p3/P2pPr2/3P4/2P1PN2/1r6/R4RK1 w - - 0 46  bm Rfb1 (0.8s)
-setboard 4rrk1/1pq2ppp/p1bb2n1/2p5/P1B1P3/2B2N2/1P2QPPP/R2R2K1 w - - 0 18  bm Bd3, e5, Qd3 (1.0s)
-setboard 4r1k1/2r1pp1p/pp4p1/3b4/PB1b2N1/8/5PPP/3RR1K1 b - - 0 25 bm Bg7 (1.3s)
-setboard 1r5k/q1p3p1/3b1p1p/8/p1P4N/3Q1PP1/2P3K1/7R b - - 0 30 am a3 (2.8s)
-setboard 4r1k1/pp1b1pp1/1q1b1p2/3P4/2Q2PP1/P1N5/RP2N3/7K b - - 0 22 bm Qf2 (2.9s)
-setboard r1bqr1k1/p2p1pp1/1p5p/2pP3Q/1n2p3/1P2P1P1/PB1P1PP1/R3KB1R w KQ - bm Bg7 (3.0s)
-setboard 6k1/8/5pB1/4b2p/3rP2P/2K1R1P1/1r2R3/8 b - - 0 57 bm Rd7, Rd8 -- announce Mate in 5 (3.7s)
-setboard 3b2k1/3Prp1p/R5p1/p7/2Bp4/1P3P2/P5PP/6K1 w - - 0 40 bm Bb5 (3.8s)
-setboard 1k2r3/p2BPb1p/5P2/2p2P2/Pp6/5P2/1P1B3P/n3K3 w - - 0 32 bm Be6, Bf4 (4.4s)
-setboard 6k1/4bpp1/R7/2p1P3/6qP/1P4B1/7P/1R4K1 b - - 0 36 bm c4 (5.3s)
-setboard 3rrk2/1bnqppb1/p2p2p1/1p1P2P1/1p2PP1R/2NQBN2/1PP2K2/7R w - - bm Rh8 -- Mate in 16 (5.4s) 0.54s 1.07s 0.82s
-setboard rr4k1/2Q2pbp/6p1/3P4/pp2P3/q3B1N1/4BPPP/1R4K1 b - - 0 25 bm Qc3, b3 (6.0s)
-setboard 8/8/4kp1p/R7/4N2P/p4rP1/6K1/3b4 w - - 0 52 bm Nf2 (8.4s)
-setboard r4rk1/1p2ppbp/pq1p2p1/3P4/1nP3n1/2N2N2/PP2QPPP/R1B2RK1 b - - 0 18  bm a5 (9.5s)
-setboard 8/pR5p/4k3/2P1B3/5P1r/4P3/P2r4/2R3K1 w - - 0 34  bm Rb2, Rg7 (12s)
-setboard 3r1r1k/1bq1bp1p/pn5B/1ppPPR2/P1p1B3/2P3P1/7P/R2Q2K1 w - - bm Qh5 (19s)
-setboard 3r1r2/pb3pkp/1pn2Np1/2p1PP2/8/b2BQ3/qP4PP/3R1R1K w - - 0 1 bm Ng4
-setboard rn2r1k1/p2n3p/bp2N1pQ/2pP4/2PbP3/P1N4P/1P2B3/R6K w - - 0 31  bm Rf1 (69s)
-setboard 3R4/2r5/6rp/2k5/p1p2p1P/P1Rp1P2/1P6/5K2 b - - bm Rcg7 -- announce Mate in 10 (FAIL) 4.1s 3.3s 2.05s
-setboard 8/3kp3/Q7/4p3/4K3/6p1/PP4P1/8 b - - 0 43 bm Ke8 (FAIL)
-setboard 8/2p4p/5k2/p2P4/P1K2bP1/5B2/7p/8 b - - 0 40 bm Ke5, Bd2 (FAIL)
-setboard 2r1r1k1/5p2/p3pbpB/1p1pP3/3p2P1/n1q2B2/2P2PK1/4R2R w - - bm exf6 with positive score (FAIL) 36s 18s 25s
-setboard 3r1r1k/1b4pp/ppn1p3/4Pp1R/Pn5P/3P4/4QP2/1qB1NKR1 w - - bm Rxh7 with positive score (FAIL) 5.7s 7.1s 2.2s
-setboard 5r2/pb3p1k/1pn3p1/2p1PP2/8/b2RQ3/qP4PP/5R1K w - - bm Qh3 -- Mate in 9 (FAIL) 5.9s 5.6s 5.9s
-setboard r4rk1/pp4pp/n1p3p1/4p1Pn/2P5/q2P3P/P2NPPB1/R2QK2R w KQ - 0 16 bm Qb3 (FAIL)
-setboard 3rk2r/pq1npp1p/Q5p1/1N6/3R1p2/7P/PPP3P1/2KR4 b k - 0 22 bm Qb8 (FAIL)
+// test positions -- just copy and paste in the command window
+setboard 8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1 bm Kb1
+setboard 7k/3b3p/1p6/3p1P1P/2p3r1/2P1R3/7r/2RK4 b - - 0 40 bm Rg1, Ba4 -- announce Mate in 7
+setboard r4r2/p1q1n1kp/2n1ppp1/8/3P2N1/3BPP2/2Q2P1P/R3K2R w KQ - 0 19  bm h3, h4
+setboard 2q3k1/R2bprbp/3n2p1/3P4/P2NP3/5P2/1r3BPP/3Q1RK1 b - - 0 21 bm Nxe4
+setboard R7/5k2/3p4/4p3/1P3p1R/8/2P4K/8 w - - 0 45 bm Rh6 -- announce Mate in 5
+setboard 3q2k1/Q1p1bpp1/2P1p3/P2pPr2/3P4/2P1PN2/1r6/R4RK1 w - - 0 46  bm Rfb1
+setboard 4rrk1/1pq2ppp/p1bb2n1/2p5/P1B1P3/2B2N2/1P2QPPP/R2R2K1 w - - 0 18  bm Bd3, e5, Qd3
+setboard 4r1k1/2r1pp1p/pp4p1/3b4/PB1b2N1/8/5PPP/3RR1K1 b - - 0 25 bm Bg7
+setboard 1r5k/q1p3p1/3b1p1p/8/p1P4N/3Q1PP1/2P3K1/7R b - - 0 30 am a3
+setboard 4r1k1/pp1b1pp1/1q1b1p2/3P4/2Q2PP1/P1N5/RP2N3/7K b - - 0 22 bm Qf2
+setboard r1bqr1k1/p2p1pp1/1p5p/2pP3Q/1n2p3/1P2P1P1/PB1P1PP1/R3KB1R w KQ - bm Bg7
+setboard 6k1/8/5pB1/4b2p/3rP2P/2K1R1P1/1r2R3/8 b - - 0 57 bm Rd7, Rd8 -- announce Mate in 5
+setboard 3b2k1/3Prp1p/R5p1/p7/2Bp4/1P3P2/P5PP/6K1 w - - 0 40 bm Bb5
+setboard 1k2r3/p2BPb1p/5P2/2p2P2/Pp6/5P2/1P1B3P/n3K3 w - - 0 32 bm Be6, Bf4
+setboard 6k1/4bpp1/R7/2p1P3/6qP/1P4B1/7P/1R4K1 b - - 0 36 bm c4
+setboard 3rrk2/1bnqppb1/p2p2p1/1p1P2P1/1p2PP1R/2NQBN2/1PP2K2/7R w - - bm Rh8 -- announce Mate in 16
+setboard rr4k1/2Q2pbp/6p1/3P4/pp2P3/q3B1N1/4BPPP/1R4K1 b - - 0 25 bm Qc3, b3
+setboard 8/8/4kp1p/R7/4N2P/p4rP1/6K1/3b4 w - - 0 52 bm Nf2
+setboard r4rk1/1p2ppbp/pq1p2p1/3P4/1nP3n1/2N2N2/PP2QPPP/R1B2RK1 b - - 0 18  bm a5
+setboard 8/pR5p/4k3/2P1B3/5P1r/4P3/P2r4/2R3K1 w - - 0 34  bm Rb2, Rg7
+setboard 3r1r1k/1bq1bp1p/pn5B/1ppPPR2/P1p1B3/2P3P1/7P/R2Q2K1 w - - bm Qh5
+setboard rn2r1k1/p2n3p/bp2N1pQ/2pP4/2PbP3/P1N4P/1P2B3/R6K w - - 0 31  bm Rf1
+setboard 3R4/2r5/6rp/2k5/p1p2p1P/P1Rp1P2/1P6/5K2 b - - bm Rcg7 -- announce Mate in 10
+setboard 8/3kp3/Q7/4p3/4K3/6p1/PP4P1/8 b - - 0 43 bm Ke8
+setboard 2r1r1k1/5p2/p3pbpB/1p1pP3/3p2P1/n1q2B2/2P2PK1/4R2R w - - bm exf6 -- announce mate in 10
+setboard 3r1r1k/1b4pp/ppn1p3/4Pp1R/Pn5P/3P4/4QP2/1qB1NKR1 w - - bm Rxh7 -- announce mate in 18
+setboard 5r2/pb3p1k/1pn3p1/2p1PP2/8/b2RQ3/qP4PP/5R1K w - - bm Qh3 -- Mate in 9
+setboard r4rk1/pp4pp/n1p3p1/4p1Pn/2P5/q2P3P/P2NPPB1/R2QK2R w KQ - 0 16 bm Qb3
+setboard 3rk2r/pq1npp1p/Q5p1/1N6/3R1p2/7P/PPP3P1/2KR4 b k - 0 22 bm Qb8
 setboard 6k1/7p/p2p2p1/Pp2q3/1Pp3P1/2P1Q3/5K2/8 b - - 0 65 bm Qxe3
-setboard 6K1/8/pp5p/8/7k/3PP3/8/8 w - - 0 1 bm d4 (pawn-square rule) 6.2s 64s 62s
-setboard 2br2k1/p1q3p1/1r2p2p/1p2Npb1/5N2/P2PQ1R1/1P3PPP/4R1K1 w - - 0 27 bm Rxg5 24s 19s 13s
-setboard 6rk/5r1p/Q2p4/P2Pbpq1/NP3p1n/R1P1pP2/6PP/3B2RK b - - 0 30 bm Rf6 -- Mate in 10 2.3s 4.2s 2.1s
+setboard 6K1/8/pp5p/8/7k/3PP3/8/8 w - - 0 1 bm d4
+setboard 2br2k1/p1q3p1/1r2p2p/1p2Npb1/5N2/P2PQ1R1/1P3PPP/4R1K1 w - - 0 27 bm Rxg5
+setboard 6rk/5r1p/Q2p4/P2Pbpq1/NP3p1n/R1P1pP2/6PP/3B2RK b - - 0 30 bm Rf6 -- announce Mate in 10
 setboard r5n1/p2q3k/4b2p/3pB3/2PP1QpP/8/PP4P1/5RK1 w - - 1 bm h5
-setboard 8/8/8/4b1k1/8/5P2/Pp5p/1K5R w - - 0 43 bm a4 -- announce mate
+setboard 8/8/8/4b1k1/8/5P2/Pp5p/1K5R w - - 0 43 bm a4 -- announce mate in 31
 setboard 1k6/4R3/1p6/p1p3p1/qnBn2Qp/5P2/1P6/1K6 w - - 0 46 bm Bb3 -- announce draw
-setboard 8/5k2/1b1q4/1P4QP/8/5PP1/6K1/8 w - - 0 1 bm Qg6 Myrddin v TJ
 setboard r3kb1r/1b3pp1/2Np1q1p/p1nB4/P3P3/R2p4/1PP2PPP/3QR1K1 w kq - 0 18 bm Rxd3
-setboard 8/3Pb1p1/8/3P2P1/5P2/7k/4K3/8 w - - 0 1 bm Kd3
 setboard 4KBkr/7p/6PP/4P3/8/3P1p2/8/8 w - - bm g7 needs null move verification?
 setboard rn1qkb1r/1b3p1p/p2pp1p1/8/Np1NnP2/1B2B3/PPP3PP/R2Q1RK1 w kq - 0 12 bm f5
 setboard 1r4r1/3q1npk/2b1pbnp/Rp1p4/1N1P3P/2PQ1pP1/1K3B2/5B1R w - - 0 1 bm Qg6
 setboard rn2k2r/pp1b1ppp/4pn2/8/3RP3/2B2N2/1PQK1PPP/q4B1R b kq - 0 12 am b5 (bm 0-0? Na6? Nc6?)
-setboard rnbqr2k/pppp1Qpp/8/b2NN3/2B1n3/8/PPPP1PPP/R1B1K2R w KQ - bm Qg8+ WAC.263
-setboard 1nbq1r1k/3rbp1p/p1p1pp1Q/1p6/P1pPN3/5NP1/1P2PPBP/R4RK1 w - - bm Nfg5 WAC.293
+setboard 2br4/p1p1q1r1/1pkbB3/6NQ/2pP1P2/P3P1p1/1P6/1K2R3 w - - 0 30 bm Qf3+ - mate in 13
+setboard 8/7p/5k2/5p2/p1p2P2/Pr1pPK2/1P1R3P/8 b - - bm Rxb2; WAC.002 // 5s
+setboard 5rk1/2p4p/2p4r/3P4/4p1b1/1Q2NqPp/PP3P1K/R4R2 b - - bm Qg2+ WAC.163 // 8s
+setboard 3r1rk1/1pb1qp1p/2p3p1/p7/P2Np2R/1P5P/1BP2PP1/3Q1BK1 w - - bm Nf5 WAC.256 // 9s
+setboard 1nbq1r1k/3rbp1p/p1p1pp1Q/1p6/P1pPN3/5NP1/1P2PPBP/R4RK1 w - - bm Nfg5 WAC.293 // 13s
+setboard 3nk3/p2R4/3P1Kp1/8/5p2/3bp3/3p4/8 w - - 0 1 bm Re7 -- announce mate in 24
+setboard 1n2kbnr/rp2pppp/2P5/4N3/8/1P4P1/1P1PPP1P/1NB1KB1b w k - 0 10 bm c7 -- announce mate in 10
+setboard r4k2/1pq1pp2/3p1bP1/3P4/5PB1/1P6/1P5Q/1K1R3R w - - 0 28 bm Qh7 -- announce mate in 11
 
 New
 setboard r3qrk1/p2bnppp/1pnQp3/3pP1B1/2P5/P4N2/2P2PPP/R3KB1R w KQ - 0 2 am Bd3
@@ -56,6 +56,38 @@ setboard 2r1r2k/4PQ1P/p7/Pb4R1/8/5PP1/1b4K1/8 w - - 0 66 bm f4
 setboard 8/5k1p/3b3K/5p2/1P2n3/P6P/8/4R3 w - - 8 60 am Kxh7
 setboard rn3rk1/3n4/1p2pqp1/p2p2Np/3p1P2/2PQN3/PP4PP/4RRK1 w - - 0 19 bm Nxe6
 setboard 6k1/5p1p/P1pb1nq1/6p1/3P4/1BP2PP1/1P1Nb2P/R1B3K1 b - - 0 25 bm Qd3
+
+Questionable
+setboard 8/3Pb1p1/8/3P2P1/5P2/7k/4K3/8 w - - 0 1 bm Kd3
+setboard 3rkb1r/1p2npp1/p1q5/4P3/3BP1p1/2PB1N2/PP3PP1/R2Q1RK1 w k - 0 18  bm g3, Ng5, Re1, e6
+setboard r3k1r1/1b3p1p/p2bpp2/2p5/P2p3P/3Q1P1R/1PPP2P1/R1BqNK2 b q - 0 18 bm Rxg2, Rg3 e5?
+setboard 6k1/r4pp1/2p1p2p/qp5P/r2P4/2Q1RPP1/PP6/1K2R3 b - - 0 bm b4 Qd8?
+setboard 6k1/6pp/pp6/2p1Qp1q/2Pp1P2/1P1P2P1/P4P2/6K1 b - - 0 30 bm Qd1 -- draw h6?
+setboard 5rk1/ppb3p1/3qp3/4n3/2PpP2P/P2P3Q/2P2rB1/RN1K3R b - - 0 1 bm Nxc4?
+setboard 8/2p4p/5k2/p2P4/P1K2bP1/5B2/7p/8 b - - 0 40 bm Ke5, Bd2 
+setboard 3r1r2/pb3pkp/1pn2Np1/2p1PP2/8/b2BQ3/qP4PP/3R1R1K w - - 0 1 bm Ng4
+setboard 8/5k2/1b1q4/1P4QP/8/5PP1/6K1/8 w - - 0 1 bm Qg6 Myrddin v TJ
+
+Engine Crackers
+setboard 1rb1r3/5qk1/3b2p1/1PnPp1Pp/4B3/pP3Q2/P2N1B1P/1KR3R1 b - - bm Qxf3 ;
+setboard r2q1rk1/1p2p1bp/2np2p1/2n2b2/p1P5/1PN1QN1P/PB2BPP1/3R1RK1 w - - bm Ba3 ;
+setboard 8/1pp1p3/6p1/3P4/pP3P2/8/k1K3P1/8 b - - bm c6 ;
+setboard 7k/pp1pBp1N/1p3Pp1/b3K1PR/P3P2p/R1n4P/2P1N1P1/3q4 w - -  bm  Rxc3;
+setboard r1bqr1k1/pp1nb1p1/2n3P1/3pPp1p/1p1P3P/P4N2/3N1P2/RBBQK2R w KQ - bm Ng5 ;
+setboard 4r3/4b2p/1pk2pb1/p1p5/P2pNB2/1P3P2/2P2KPP/3R4 b - - bm h5;
+setboard 7k/1p5p/2qpn1PP/Pp1p4/8/3B2p1/3B1pP1/R4K2 w - - bm a6 ;
+setboard 3kB3/5K2/7p/3p4/3pn3/4NN2/8/1b4B1 w - - bm  Nf5 ;
+setboard r2qr1k1/1ppb1pp1/p2p1bnp/P7/2NPP3/1B3P2/1P4PP/R1BQ1RK1 b - - bm d5;
+setboard 1q6/4p3/6Q1/2N1n3/p2P2P1/P2PP1k1/4Kp1p/2B5 w - - bm Ne4+ ;
+setboard 3r1r2/pb2nkp1/1pnb1p1p/2pNpP2/q1P1P1PP/3P1N2/P3BR2/3RQ1BK w - - bm g5 ;
+setboard 8/qp1N1bn1/3p4/Bn1p2R1/3pp2k/6R1/1pp1KP2/8 w - - bm R5g4+ ;
+setboard 3R4/4K1b1/8/N1n1k3/n1R1pp2/2P3P1/2N1p1P1/q7 w - - bm Rd5+ ;
+setboard 2k1rb2/2q2pBr/p2p1PpP/1pnP2P1/5Q2/P7/1PP5/2KR1B2 w - - bm Kb1 ;
+setboard 4r1nk/2p1q2p/8/3Q2PP/2P1pN2/8/5R2/5K2 w - - bm Ng6+ ;
+setboard 8/bp4Pk/3K1B2/R6p/2pNp1P1/p7/3p1Pn1/2r4q w - -  bm  Ke6 ;
+setboard 4r3/2kbr1p1/2p2p2/p2p1P2/P2B2Pp/KP2P2P/8/1RR5 w - - bm b4 ;
+setboard 6k1/2p2p1p/4pP2/8/1pPB1P1P/7p/1KP1R3/7r w - - bm Be5;
+setboard r1n5/k3pp2/2Rr4/1p6/1p6/p4pp1/QP4Pn/4RBK1 w - - bm Rec1 ;
 
 From Jon Dart's "easy" set
 setboard rn1qr1k1/1p2np2/2p3p1/8/1pPb4/7Q/PB1P1PP1/2KR1B1R w - - bm Qh8; c0 "Winning Chess by Chernev & Reinfeld, 259A, after BxN"; 
@@ -80,13 +112,6 @@ setboard r5rk/p1qnbp1p/1p2p2Q/3pP2p/P1pPb3/2P2N1P/1P2BPP1/RNR3K1 b - - bm Bxf3;
 setboard 1r3r2/p3q1bk/5npp/2p5/2B1PpP1/1R3P2/PB5P/1QR3K1 w - - bm Bxf6; c0 "Taimanov-Vasiukov, World Senior Chmp 1994"; 
 setboard 4kb1r/1bBnpppp/p7/1p1q/3P3n/5P/PPQ1B2P/2R2KNR w - - bm Bg3; c0 "Winning Chess by Chernev & Reinfeld, 238A"; 
 
-Questionable
-setboard 3rkb1r/1p2npp1/p1q5/4P3/3BP1p1/2PB1N2/PP3PP1/R2Q1RK1 w k - 0 18  bm g3, Ng5, Re1, e6 (35s) 33s g3 43s e6
-setboard r3k1r1/1b3p1p/p2bpp2/2p5/P2p3P/3Q1P1R/1PPP2P1/R1BqNK2 b q - 0 18 bm Rxg2, Rg3 (FAIL) e5?
-setboard 6k1/r4pp1/2p1p2p/qp5P/r2P4/2Q1RPP1/PP6/1K2R3 b - - 0 bm b4 (FAIL) Qd8?
-setboard 6k1/6pp/pp6/2p1Qp1q/2Pp1P2/1P1P2P1/P4P2/6K1 b - - 0 30 bm Qd1 -- draw (FAIL) h6?
-setboard 5rk1/ppb3p1/3qp3/4n3/2PpP2P/P2P3Q/2P2rB1/RN1K3R b - - 0 1 bm Nxc4?
-
 3-rep draw test
 setboard 3r3N/R1p1kppp/n6n/8/2QPP3/5q2/5P1P/5RK1 w - - 0 24 am Qxa6
 
@@ -96,7 +121,58 @@ setboard r1r1k3/7p/1p4p1/1p1pPp2/1p1P1P1P/P2P2P1/1P4K1/4R3 w q - 0 1  for testin
 setboard 8/p7/3Pb3/1pB1pkPP/2p4R/2P5/2P2K2/2r5 b - - 0 1 for testing pawn structure
 
 SEE test
-setboard 1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - Nxe5 is a losing capture
+setboard 1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - ; d3 e5; -200
+setboard 6k1/1pp4p/p1pb4/6q1/3P1pRr/2P4P/PP1Br1P1/5RKN w - -; f1 f4; -100; P - R + B
+setboard 5rk1/1pp2q1p/p1pb4/8/3P1NP1/2P5/1P1BQ1P1/5RK1 b - -; d6 f4; 0; -N + B
+setboard 4R3/2r3p1/5bk1/1p1r3p/p2PR1P1/P1BK1P2/1P6/8 b - -; h5 g4; 0;
+setboard 4R3/2r3p1/5bk1/1p1r1p1p/p2PR1P1/P1BK1P2/1P6/8 b - -; h5 g4; 0;
+setboard 4r1k1/5pp1/nbp4p/1p2p2q/1P2P1b1/1BP2N1P/1B2QPPK/3R4 b - -; g4 f3; 0;
+setboard 2r1r1k1/pp1bppbp/3p1np1/q3P3/2P2P2/1P2B3/P1N1B1PP/2RQ1RK1 b - -; d6 e5; 100; P
+setboard 8/4kp2/2npp3/1Nn5/1p2PQP1/7q/1PP1B3/4KR1r b - -; h1 f1; 0;
+setboard 2r2r1k/6bp/p7/2q2p1Q/3PpP2/1B6/P5PP/2RR3K b - -; c5 c1; 100; R - Q + R
+setboard r2qk1nr/pp2ppbp/2b3p1/2p1p3/8/2N2N2/PPPP1PPP/R1BQR1K1 w kq -; f3 e5; 100; P
+setboard 6r1/4kq2/b2p1p2/p1pPb3/p1P2B1Q/2P4P/2B1R1P1/6K1 w - -; f4 e5; 0;
+setboard 3q2nk/pb1r1p2/np6/3P2Pp/2p1P3/2R4B/PQ3P1P/3R2K1 w - h6; gxh6; 0;
+setboard 3q2nk/pb1r1p2/np6/3P2Pp/2p1P3/2R1B2B/PQ3P1P/3R2K1 w - h6; gxh6; 100; P
+setboard 2r4r/1P4pk/p2p1b1p/7n/BB3p2/2R2p2/P1P2P2/4RK2 w - -; c3 c8; 500; R
+setboard 2r5/1P4pk/p2p1b1p/5b1n/BB3p2/2R2p2/P1P2P2/4RK2 w - -; c3 c8; 500; R
+setboard 2r4k/2r4p/p7/2b2p1b/4pP2/1BR5/P1R3PP/2Q4K w - -; c3 c5; 300; B
+setboard 8/pp6/2pkp3/4bp2/2R3b1/2P5/PP4B1/1K6 w - -; g2 c6; -200; P - B
+setboard 4q3/1p1pr1k1/1B2rp2/6p1/p3PP2/P3R1P1/1P2R1K1/4Q3 b - -; e6 e4; -400; P - R
+setboard 4q3/1p1pr1kb/1B2rp2/6p1/p3PP2/P3R1P1/1P2R1K1/4Q3 b - -; h7 e4; 100; P
+setboard 3r3k/3r4/2n1n3/8/3p4/2PR4/1B1Q4/3R3K w - -; d3 d4; -100; P - R + N - P + N - B + R - Q + R
+setboard 1k1r4/1ppn3p/p4b2/4n3/8/P2N2P1/1PP1R1BP/2K1Q3 w - -; d3 e5; 100; N - N + B - R + N
+setboard 1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - -; d3 e5; -200; P - N
+setboard rnb2b1r/ppp2kpp/5n2/4P3/q2P3B/5R2/PPP2PPP/RN1QKB2 w Q -; Bxf6; 100; N - B + P
+setboard r2q1rk1/2p1bppp/p2p1n2/1p2P3/4P1b1/1nP1BN2/PP3PPP/RN1QR1K1 b - -; Bxf3; 0; N - B
+setboard r1bqkb1r/2pp1ppp/p1n5/1p2p3/3Pn3/1B3N2/PPP2PPP/RNBQ1RK1 b kq -; Nxd4; 0; P - N + N - P
+setboard r1bq1r2/pp1ppkbp/4N1p1/n3P1B1/8/2N5/PPP2PPP/R2QK2R w KQ -; Nxg7; 0; B - N
+setboard r1bq1r2/pp1ppkbp/4N1pB/n3P3/8/2N5/PPP2PPP/R2QK2R w KQ -; Nxg7; 300; B
+setboard rnq1k2r/1b3ppp/p2bpn2/1p1p4/3N4/1BN1P3/PPP2PPP/R1BQR1K1 b kq -; Bxh2; -200; P - B
+setboard rn2k2r/1bq2ppp/p2bpn2/1p1p4/3N4/1BN1P3/PPP2PPP/R1BQR1K1 b kq -; Bxh2; 100; P
+setboard r2qkbn1/ppp1pp1p/3p1rp1/3Pn3/4P1b1/2N2N2/PPP2PPP/R1BQKB1R b KQq -; g4 f3; 100; N - B + P
+setboard rnbq1rk1/pppp1ppp/4pn2/8/1bPP4/P1N5/1PQ1PPPP/R1B1KBNR b KQ -; Bxc3; 0; N - B
+setboard r4rk1/3nppbp/bq1p1np1/2pP4/8/2N2NPP/PP2PPB1/R1BQR1K1 b - -; b6 b2; -800; P - Q
+setboard r4rk1/1q1nppbp/b2p1np1/2pP4/8/2N2NPP/PP2PPB1/R1BQR1K1 b - -; Nxd5; -200; P - N
+setboard 1r3r2/5p2/4p2p/2k1n1P1/2PN1nP1/1P3P2/8/2KR1B1R b - -; Rxb3; -400; P - R
+setboard 1r3r2/5p2/4p2p/4n1P1/kPPN1nP1/5P2/8/2KR1B1R b - -; Rxb4; 100; P
+setboard 2r2rk1/5pp1/pp5p/q2p4/P3n3/1Q3NP1/1P2PP1P/2RR2K1 b - -; Rxc1; 0; R - R
+setboard 5rk1/5pp1/2r4p/5b2/2R5/6Q1/R1P1qPP1/5NK1 b - -; Bxc2; -100; P - B + R - Q + R = WRONG!
+setboard 1r3r1k/p4pp1/2p1p2p/qpQP3P/2P5/3R4/PP3PP1/1K1R4 b - -; Qxa2; -800; P - Q
+setboard 1r5k/p4pp1/2p1p2p/qpQP3P/2P2P2/1P1R4/P4rP1/1K1R4 b - -; Qxa2; 100; P
+setboard r2q1rk1/1b2bppp/p2p1n2/1ppNp3/3nP3/P2P1N1P/BPP2PP1/R1BQR1K1 w - -; Nxe7; 0; B - N
+setboard rnbqrbn1/pp3ppp/3p4/2p2k2/4p3/3B1K2/PPP2PPP/RNB1Q1NR w - -; Bxe4; 100; P
+setboard 4kbnr/p1P4p/b1q5/5pP1/4n3/5Q2/PP1PPP1P/RNB1KBNR w KQk f6; gxf6; 0; P - P
+setboard 4kbnr/p1P4p/b1q5/5pP1/4n3/5Q2/PP1PPP1P/RNB1KBNR w KQk f6; gxf6;	0; P - P
+setboard 4kbnr/p1P4p/b1q5/5pP1/4n2Q/8/PP1PPP1P/RNB1KBNR w KQk f6; gxf6; 0; P - P
+setboard rnbqk2r/pp3ppp/2p1pn2/3p4/3P4/N1P1BN2/PPB1PPPb/R2Q1RK1 w kq -; Kxh2; 300; B
+setboard 3N4/2K5/2n5/1k6/8/8/8/8 b - -; Nxd8; 0; N - N
+setboard 3N4/2P5/2n5/1k6/8/8/8/4K3 b - -; Nxd8; -800; N - (N + Q - P) 
+setboard 3n3r/2P5/8/1k6/8/8/3Q4/4K3 w - -; Qxd8; 300; N
+setboard r2n3r/2P1P3/4N3/1k6/8/8/8/4K3 w - -; Nxd8; 300; N
+setboard 8/8/8/1k6/6b1/4N3/2p3K1/3n4 w - -; Nxd1; 0; N - N
+setboard 8/8/1k6/8/8/2N1N3/2p1p1K1/3n4 w - -; Nxd1; -800; N - (N + Q - P)
+setboard 8/8/1k6/8/8/2N1N3/4p1K1/3n4 w - -; Ncxd1; 100; N - (N + Q - P) + Q 
 
 TB test
 setboard 4k3/8/8/8/8/8/4P3/4K3 w - - bm Kd2, Kf2
@@ -128,97 +204,86 @@ setboard 5Kbk/6pp/6P1/8/8/8/8/7R w - -
 setboard k1b5/1p1p1p1p/pPpPpPpP/P1P1P1P1/8/8/8/K1B5 w - - 0 1
 
 Movegen test
-setboard r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1 // perft(6) = 485,647,607 63.13
+setboard rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 // perft(6) = 119,060,324
+setboard r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1 // perft(6) = 485,647,607
 setboard r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1 // perft(6) = 706,045,033
-setboard 8/7p/p5pb/4k3/P1pPn3/8/P5PP/1rB2RK1 b - d3 0 28 // perft 6 = 38,633,283
-setboard 8/3K4/2p5/p2b2r1/5k2/8/8/1q6 b - - 1 67 // perft 7 = 493,407,574
-setboard rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3 // perft 6 = 244,063,299
+setboard 8/7p/p5pb/4k3/P1pPn3/8/P5PP/1rB2RK1 b - d3 0 28 // perft(6) = 38,633,283
+setboard 8/3K4/2p5/p2b2r1/5k2/8/8/1q6 b - - 1 67 // perft(7) = 493,407,574
+setboard rnbqkb1r/ppppp1pp/7n/4Pp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3 // perft(6) = 244,063,299
 
 Ron's perft positions
-setboard r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - // Perft(5) == 193,690,690 14.68
-setboard 8/p7/8/1P6/K1k3p1/6P1/7P/8 w - - // Perft(8) == 8,103,790 0.87
-setboard n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - // Perft(6) == 71,179,139 7.12
-setboard r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq - // Perft(6) == 77,054,993 6.39
-setboard 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - // Perft(7) == 178,633,661 15.94
-setboard 8/5p2/8/2k3P1/p3K3/8/1P6/8 b - - // Perft(8) == 64,451,405 6.21
-setboard r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq - // Perft(5) == 29,179,893 2.17
+setboard r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - // perft(5) = 193,690,690 KiwiPete
+setboard 8/p7/8/1P6/K1k3p1/6P1/7P/8 w - - // perft(8) = 8,103,790
+setboard n1n5/PPPk4/8/8/8/8/4Kppp/5N1N b - - // perft(6) = 71,179,139
+setboard r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq - // perft(6) = 77,054,993
+setboard 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - // perft(7) = 178,633,661
+setboard 8/5p2/8/2k3P1/p3K3/8/1P6/8 b - - // perft(8) = 64,451,405
+setboard r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq - // perft(5) = 29,179,893
+0x88 version (bulk counting) = 204.5s
 Original Bitboard version = 65.4s
-Optimized movegen (don't flag checking moves) = 53.38
-0x88 version = 204.5s
+Current version = 52.6s
+
+FRC perft
+setboard bnrbnkrq/pppppppp/8/8/8/8/PPPPPPPP/BNRBNKRQ w KQkq - 0 1 // perft 6: 145999259
+setboard rbknqnbr/pppppppp/8/8/8/8/PPPPPPPP/RBKNQNBR w KQkq - 0 1 // perft 6: 126480040
+setboard qbrnnkbr/pppppppp/8/8/8/8/PPPPPPPP/QBRNNKBR w KQkq - 0 1 // perft 6: 121613156
+setboard nqbnrbkr/pppppppp/8/8/8/8/PPPPPPPP/NQBNRBKR w KQkq - 0 1 // perft 6: 93888956
+setboard nrnkbqrb/pppppppp/8/8/8/8/PPPPPPPP/NRNKBQRB w KQkq - 0 1 // perft 6: 97044730
+setboard bnnr1krb/ppp2ppp/3p4/3Bp3/q1P3PP/8/PP1PPP2/BNNRQKR1 w KQkq - 0 9 // perft 6: 1075147725
+setboard nbnrbk1r/pppppppq/8/7p/8/1N2QPP1/PPPPP2P/NB1RBK1R w KQkq - 2 9 // perft 6: 1124883780
+setboard 1nbbnrkr/p1p1ppp1/3p4/1p3P1p/3Pq2P/8/PPP1P1P1/QNBBNRKR w KQkq - 0 9 // perft 6: 1250970898
 
 Wild 20 test
 setboard r1b2rk1/pp1qpn1p/1n1P2p1/8/4N3/1B3Q2/PP3PPP/R1B1R1K1 w Qq - 0 1
 
-Symmetrical eval positions -- NO LONGER APPLICABLE AFTER ASYMMETRICAL PST!
+Symmetrical eval positions -- BEWARE - USING ASYMMETRICAL PST!
 setboard r3rk2/ppp1q1pp/2n5/5bN1/2B1pP2/Q7/PPP4P/1KR3R1 w - - bm Nxh7+; 
 setboard 2kr3r/pp1q1ppp/5n2/1Nb5/2Pp1B2/7Q/P4PPP/1R3RK1 w - - bm Nxa7+; 
 setboard 1r3rk1/p4ppp/7q/2pP1b2/1nB5/5N2/PP1Q1PPP/2KR3R b - - bm Nxa2+; 
 setboard 1kr3r1/ppp4p/q7/2b1Pp2/5Bn1/2N5/PPP1Q1PP/R3RK2 b - - bm Nxh2+; 
 
+Mate in 2 Chessnut
+setboard 3k4/R6R/3n4/8/8/3K4/8/8 w - - bm Rhg7; c0 "Bonus Socius (1266) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #1";
+setboard 2brrb2/8/p7/7Q/1p1kpPp1/1P1pN1K1/3P4/8 w - - bm Qa5; c0 "Sam Loyd (1859) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #2";
+setboard 3r3r/pbp2pbp/1p5q/8/Q6P/B2B1PPN/1R2P1N1/2k1nK1R w - - bm Bf8; c0 "Sam Loyd (1892) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #3";
+setboard 8/1n1NBP1K/5Rpn/r4B2/r4k1p/4p3/6Q1/7N w - - bm Ra6; c0 "Sam Loyd (1892) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #4";
+setboard b4b2/3r4/3pr3/8/1K5N/2PR4/Q3p3/5kBR w - - bm Qa6; c0 "GodFrey Heathcote (1904) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #5";
+setboard 4K3/3Q4/8/p3k2N/r7/R2B4/5P2/7b w - - bm Be4; c0 "GodFrey Heathcote (1891) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #6";
+setboard 6K1/pN2R1PQ/p7/r2k3r/N2n4/1P2p3/BB5p/2Rb2bq w - - bm Rcc7; c0 "GodFrey Heathcote (1905) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #7";
+setboard 8/qQ5p/3pN2K/3pp1R1/4k3/7N/1b1PP3/8 w - - bm Nd4; c0 "GodFrey Heathcote (1911) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #8";
+setboard 8/8/1b1ppNbB/nQr2k2/n1p3N1/1P2p1p1/2Kp1q2/1B1R1R2 w - - bm Rc1; c0 "Alian White (1906) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #9";
+- setboard 8/2Q2K2/1p6/1B5n/3B4/N4P2/1b1k1rPN/nR6 w - - bm g4; c0 "Alian White (1917) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #10";
+- setboard 8/3p1B2/3r1PP1/4N1Rb/2P1k1p1/3N3r/3KPQ1b/4R3 w - - bm Kc3; c0 "Alian White (1918) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #11";
+- setboard 8/2pQ2b1/K1Bqp3/8/4R3/N2k4/3P3R/8 w - - bm Rb4; c0 "Alian White (1918) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #12";
+setboard 8/q3Rp2/3pP3/2n2P1N/2P5/QP2k1N1/3R2P1/2BK4 w - - bm Bb2; c0 "Alian White (1918) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #13";
+setboard 2Q5/3r4/2Nnk1P1/8/2PBB1N1/8/8/3KR3 w - - bm Bc5; c0 "Alian White (1918) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #14";
+- setboard 3R3K/8/5Q2/8/5N2/1B6/2PB4/1qbk4 w - - bm Qa1; c0 "Alian White (1920) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #15";
+setboard b2N4/3n3B/1q2p3/1p4p1/pRr2kpb/K2Q2r1/7B/2N1R3 w - - bm Qc3; c0 "Alian White (1942) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #16";
+- setboard 8/8/3B2p1/6K1/1PPkp3/2RnN2Q/8/nN6 w - - bm Qh5; c0 "William Meredith (1886) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #17";
+setboard 8/5R2/1N2p1pK/4k1p1/nQ6/1N1q1B2/8/8 w - - bm Qd2; c0 "William Meredith (1889) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #18";
+setboard 3nbb2/Q1pr1pp1/B7/p1PP3p/K1Nk3r/1RN1RPP1/8/B7 w - - bm Na3; c0 "Arthur Mackenzie (1905) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #19";
+setboard 4R3/1B6/8/8/1KN1n2r/5P2/1R1Pk2P/1Q6 w - - bm Ne3; c0 "Friedrich Kuskop (1915) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #20";
+setboard Q7/6N1/Kp4B1/3pp1n1/3k1r2/p1R4R/4rn2/B6q w - - bm Be4; c0 "Murray Marble (1909) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #21";
+setboard 4R3/6B1/3p4/3P1RN1/1Nr1P3/2p1kP2/Q2n4/1qb2BK1 w - - bm Bh6; c0 "Alexander Kish (1936) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #22";
+setboard 4Bbb1/K1B3Q1/7R/2kn1r2/R1N1P3/1r1p4/8/n3N1q1 w - - bm Na5; c0 "William Beers (1934) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #23";
+setboard 2K3Bn/B7/3pp1N1/1p1P3R/4k3/R5q1/N1P3Pp/7Q w - - bm Qb1; c0 "Alian White (1941) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #24";
+- setboard 2Nn4/1n3p2/2p2P2/p1pk4/P6R/4K2B/p7/B7 w - - bm Bg4; c0 "F. A. Tauber (1922) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #25";
+- setboard 3nN3/1n3p2/2p2P2/p1pk4/P6R/4K2B/p7/B7 w - - bm Rg4; c0 "F. A. Tauber (1922) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #26";
+- setboard qB2nn2/p7/Q7/1PPkN1p1/3Pp1Bp/1pP4K/8/8 w - - bm Bc7; c0 "Kenneth S. Howard (1925) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #27";
+setboard qB3n2/p3p3/Q7/1PPkN1p1/3Pp1Bp/1pP4K/8/8 w - - bm Qa1; c0 "Kenneth S. Howard (1925) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #28";
+setboard 8/3p1p1Q/1K2k3/1N1Np3/8/1B6/8/8 w - - bm Ba4; c0 "William Shinkman (1877) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #29";
+setboard 8/3ppp1Q/1K2k3/1N1Np3/8/1B6/8/8 w - - bm Ba4 Ne3+; c0 "William Shinkman (1877) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #30";
+- setboard 3N4/2p3B1/q3p3/2k4K/p1N5/P2R4/B4n2/1R6 w - - bm Nd6; c0 "Godfrey Heathcote (1900) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #31";
+- setboard 3N4/2p3B1/q3p3/2k5/2N5/pQ1R4/K4n2/8 w - - bm Nd6; c0 "Friedrich Kuskop (1900) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #32";
+setboard 2Bb4/1K2P1rN/R1Pk1nbR/5p2/3P3B/5Q2/1Np5/8 w - - bm Qb3; c0 "Alexander Kish (1937) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #33";
+setboard 2Bb4/1K2P1rN/R1Pk1nbR/N4p2/3P3B/8/6Q1/8 w - - bm Qa2; c0 "Arnaldo Ellerman (1923) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #34";
+setboard 2R5/Bp3B2/2b2n2/3Np1Q1/P1k2p2/Ppn4R/4N3/b6K w - - bm Qf5; c0 "L. J. Loschinsky (1932) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #35";
+setboard b1R5/B4B2/2q2n2/1p1NpQ2/1bkp1p1R/2n5/P3N3/7K w - - bm Rh3; c0 "P. Ten Cate (1923) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #36";
+setboard 7K/4B3/4N3/1b2k1N1/6Pp/n1r5/1Q6/bB1Rn3 w - - bm Ba2; c0 "Kenneth S. Howard (1936) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #37";
+setboard 8/K3B3/4N3/1b2k1N1/6Pp/n1r5/1Q6/bB1Rn3 w - - bm Ba2; c0 "Sandor Hertmann (1925) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #38";
+setboard 5nBb/3b2Q1/5r2/7R/3k3n/K7/2P5/4R3 w - - bm Kb4; c0 "J. Hartong (1919) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #39";
+setboard r3k3/p1p5/Q3K3/8/8/8/8/8 w - - bm Qa1; c0 "2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #40";
+
 STUFF TO DO
 when to do IID
 instant research on fail low at root
-don't flag checking moves (tried and failed twice, maybe try again?)
-reduce size of PV structure
-
-Tuning!
-initial best
-K = 1.2991
-E = 98594
-
-Tapered Eval = +29
-1st tune = no ks pawn shield 
-           king_attacker 1
-	   no pawn eval = 97263.6 +31
-2nd tune = above 
-	   bishop pair 16/35 
-	   MG rook open file 34 (no EG) 
-	   doubled pawn 14/23 
-	   blocked doubled 6/2
-	   isolated pawn 10/0 
-	   f3/no pawn shield 8/15 = 96511.1 +26
-3rd tune = above
-           N mobility min-moves/mg/eg 1/2/2
-	   B mobility min-moves/mg/eg 4/3/2
-           R mobility min-moves/mg/eg 6/3/2
-	   Q mobility min-moves/mg/eg 5/0/7
-	   mg passers for 4th/5th/6th rank 7/17/0 
-	   eg passers for 4th/5th/6th rank 11/23/24
-           protected passers 7/16
-           connected passers 0/8 
-	   removed rooks behind passers
-	   removed king can't catch passer
-           queen adj 21/21
-	   rook adj -8/18 
-           bishop adj 2/0
-           knight adj 9/5 
-           pawn adj 1/0 = 95549.46 +23
-
-Second pass
-K = 1.3952
-E = 95428.5
-king attacker 1 (no change)
-bishop pair 23/50 = 95388.19
-MG rook open file 29 = 95381.23
-doubled pawn 8/19 = 95343.47
-blocked doubled 2/2 = 95340.17
-isolated 11/4 = 95318.07
-protected passers 5/11 = 95314.44
-connected passers 0/4 = 95313.48
-f3/no pawn shield 8/16 = 95312.70
-queen adj 37/23 = 95310.41
-rook adj 1/15 = 95306.27
-bishop adj 2/0 (no change)
-knight adj 17/1 = 95285.43
-pawn adj -1/-2 = 95278.27
-mg passers for 4th/5th/6th rank 7/17/0 (no change)
-eg passers for 4th/5th/6th rank 17/31/21 = 95213.96
-N mobility min-moves/mg/eg 1/1/2 = 95191.04
-B mobility min-moves/mg/eg 4/3/3 = 95186.44
-R mobility min-moves/mg/eg 6/3/2 (no change)
-Q mobility min-moves/mg/eg 4/0/6 = 95182.23 +17
-
-Third pass
-Added more positions
-K = 1.3757
-E = 176558.26

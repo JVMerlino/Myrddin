@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -30,7 +30,6 @@ enum thinking_modes
     END_THINKING,		// end thinking by rewinding the search tree
     STOP_THINKING,		// kill thinking immediately -> USE WITH CAUTION, will leave search tree corrupted!
     PONDER,				// tell the engine to begin pondering the next time through the main loop, only used when playing a game
-    PAUSE,				// pause thinking -- not implemented!
 };
 
 typedef struct KILLER {
@@ -38,12 +37,14 @@ typedef struct KILLER {
     long		nEval;
 } KILLER, *PKILLER;
 
-extern unsigned long long nSearchNodes, nPerftMoves;
+extern unsigned long long nSearchNodes, nQNodes, nPerftMoves;
 extern PV  evalPV, prevDepthPV;
 extern int nCurEval, nPrevEval;
+extern BB_BOARD bbEvalBoard;
 
 unsigned long long doBBPerft(int depth, BB_BOARD *Board, BOOL bDivide);
 int		Think(int nDepth);
 void	ClearHistory(void);
 void	ClearKillers(BOOL bScoreOnly);
 void    InitThink(void);
+int     BBSEEMove(CHESSMOVE* cmMove, int ctSide);

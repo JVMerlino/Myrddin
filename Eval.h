@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
 extern int	nPieceVals[NPIECES];
+extern int  PST[14][64];
 
 BOOL IsPassedPawn(BB_BOARD *EvalBoard, int sq, int color);
 int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta);

@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -26,8 +26,6 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Hash.h"
 #include "parray.inc"
 #include "FEN.h"
-
-#define FLAG_CHECKS FALSE    // Wish I could set it to FALSE but can't make it work!
 
 int nPiecePhaseVals[NPIECES] = {0, QUEEN_PHASE, ROOK_PHASE, MINOR_PHASE, MINOR_PHASE, PAWN_PHASE}; 
 
@@ -96,7 +94,7 @@ Bitboard GetAttackers(BB_BOARD *Board, int square, int color, BOOL bNeedOnlyOne)
 
     // find all possible enemy attackers
 	INDEX_CHECK(square, bbKnightMoves);
-    attackers |= bbKnightMoves[square] & Board->bbPieces[KNIGHT][color];
+    attackers = bbKnightMoves[square] & Board->bbPieces[KNIGHT][color];
     if (attackers && bNeedOnlyOne)
         return(attackers);
 	INDEX_CHECK(square, bbKingMoves);
@@ -256,7 +254,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
         if (castles & WHITE_KINGSIDE_BIT)
         {
             // castling squares are empty
-            if ((Board->squares[BB_F1] + Board->squares[BB_G1]) == EMPTY)
+            if ((Board->bbOccupancy & wkc) == EMPTY)
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_F1, opp, TRUE) | (GetAttackers(Board, BB_G1, opp, TRUE))) == 0)
@@ -268,7 +266,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
         if (castles & WHITE_QUEENSIDE_BIT)
         {
             // castling squares are empty
-            if ((Board->squares[BB_D1] + Board->squares[BB_C1] + Board->squares[BB_B1]) == EMPTY)
+            if ((Board->bbOccupancy & wqc) == EMPTY)
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_D1, opp, TRUE) | (GetAttackers(Board, BB_C1, opp, TRUE))) == 0)
@@ -282,7 +280,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
         if (castles & BLACK_KINGSIDE_BIT)
         {
             // castling squares are empty
-            if ((Board->squares[BB_F8] + Board->squares[BB_G8]) == EMPTY)
+            if ((Board->bbOccupancy & bkc) == EMPTY)
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_F8, opp, TRUE) | (GetAttackers(Board, BB_G8, opp, TRUE))) == 0)
@@ -294,7 +292,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
         if (castles & BLACK_QUEENSIDE_BIT)
         {
             // castling squares are empty
-            if ((Board->squares[BB_D8] + Board->squares[BB_C8] + Board->squares[BB_B8]) == EMPTY)
+            if ((Board->bbOccupancy & bqc) == EMPTY)
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_D8, opp, TRUE) | (GetAttackers(Board, BB_C8, opp, TRUE))) == 0)
@@ -449,10 +447,10 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
         topiece = Board->squares[to];
 
         // adjust the bitboards
-        RemovePiece(Board, from);
+        RemovePiece(Board, from, FALSE);
         if (topiece)
-            RemovePiece(Board, to);
-        PutPiece(Board, frompiece, to);
+            RemovePiece(Board, to, FALSE);
+        PutPiece(Board, frompiece, to, FALSE);
 
         // has king moved?
         if (PIECEOF(frompiece) == KING)
@@ -461,55 +459,48 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
             newkingsquare = kingsquare;
 
         if (flag & MOVE_ENPASSANT)
-            RemovePiece(Board, Board->epSquare);
+            RemovePiece(Board, Board->epSquare, FALSE);
         else if (flag & MOVE_OO)
         {
-            RemovePiece(Board, (color == WHITE ? BB_H1 : BB_H8));
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_F1 : BB_F8));
+            RemovePiece(Board, (color == WHITE ? BB_H1 : BB_H8), FALSE);
+            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_F1 : BB_F8), FALSE);
         }
         else if (flag & MOVE_OOO)
         {
-            RemovePiece(Board, (color == WHITE ? BB_A1 : BB_A8));
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_D1 : BB_D8));
+            RemovePiece(Board, (color == WHITE ? BB_A1 : BB_A8), FALSE);
+            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_D1 : BB_D8), FALSE);
         }
         else if (flag & MOVE_PROMOTED)
         {
-            RemovePiece(Board, to);
-            PutPiece(Board, (color == WHITE ? XWHITE | flag & MOVE_PIECEMASK : XBLACK | flag & MOVE_PIECEMASK), to);
+            RemovePiece(Board, to, FALSE);
+            PutPiece(Board, (color == WHITE ? XWHITE | flag & MOVE_PIECEMASK : XBLACK | flag & MOVE_PIECEMASK), to, FALSE);
         }
 
         if (GetAttackers(Board, newkingsquare, OPPONENT(color), TRUE))	// move left king in check, so it is illegal
             legal_move_list[x].moveflag |= MOVE_REJECTED;
-#if FLAG_CHECKS
-        else
-        {
-            if (BBKingInDanger(Board, OPPONENT(color)))
-                legal_move_list[x].moveflag |= MOVE_CHECK;
-        }
-#endif
 
         // put the bitboards back
-        RemovePiece(Board, to);
-        PutPiece(Board, frompiece, from);
+        RemovePiece(Board, to, FALSE);
+        PutPiece(Board, frompiece, from, FALSE);
         if (topiece)
-            PutPiece(Board, topiece, to);
+            PutPiece(Board, topiece, to, FALSE);
 
         if (flag & MOVE_ENPASSANT)
-            PutPiece(Board, PAWN | (color == WHITE ? XBLACK : XWHITE), Board->epSquare);
+            PutPiece(Board, PAWN | (color == WHITE ? XBLACK : XWHITE), Board->epSquare, FALSE);
         else if (flag & MOVE_OO)
         {
-            RemovePiece(Board, (color == WHITE ? BB_F1 : BB_F8));
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_H1 : BB_H8));
+            RemovePiece(Board, (color == WHITE ? BB_F1 : BB_F8), FALSE);
+            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_H1 : BB_H8), FALSE);
         }
         else if (flag & MOVE_OOO)
         {
-            RemovePiece(Board, (color == WHITE ? BB_D1 : BB_D8));
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_A1 : BB_A8));
+            RemovePiece(Board, (color == WHITE ? BB_D1 : BB_D8), FALSE);
+            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_A1 : BB_A8), FALSE);
         }
         else if (flag & MOVE_PROMOTED)
         {
-            RemovePiece(Board, from);
-            PutPiece(Board, (color == WHITE ? WHITE_PAWN : BLACK_PAWN), from);
+            RemovePiece(Board, from, FALSE);
+            PutPiece(Board, (color == WHITE ? WHITE_PAWN : BLACK_PAWN), from, FALSE);
         }
     }
 
@@ -578,7 +569,7 @@ void BBUpdateCastleStatus(BB_BOARD *Board, SquareType from, SquareType to)
 ** MakeMove - makes move and returns captured piece if any
 **========================================================================
 */
-PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
+void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
 {
     assert(move_to_make);
     assert(Board);
@@ -645,10 +636,10 @@ PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
         Board->fifty++;
 
     // move the pieces
-    RemovePiece(Board, from);
+    RemovePiece(Board, from, TRUE);
     if (captured_piece != EMPTY)
-        RemovePiece(Board, to);
-    PutPiece(Board, moving_piece, to);
+        RemovePiece(Board, to, TRUE);
+    PutPiece(Board, moving_piece, to, TRUE);
 
     if (moveflag & MOVE_ENPASSANT)
     {
@@ -663,7 +654,7 @@ PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             pIndex += 6;
         dwSignature ^= aPArray[pIndex][cap_square];
 
-        RemovePiece(Board, cap_square);
+        RemovePiece(Board, cap_square, TRUE);
     }
 
     // check for initial pawn move and set en passant square
@@ -691,8 +682,8 @@ PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             dwSignature ^= aPArray[pIndex][to + 1];
             dwSignature ^= aPArray[pIndex][from + 1];
 
-            piece = RemovePiece(Board, to + 1);
-            PutPiece(Board, piece, from + 1);
+            piece = RemovePiece(Board, to + 1, TRUE);
+            PutPiece(Board, piece, from + 1, TRUE);
         }
         else if (moveflag & MOVE_OOO)
         {
@@ -705,18 +696,10 @@ PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             dwSignature ^= aPArray[pIndex][to - 2];
             dwSignature ^= aPArray[pIndex][from - 1];
 
-            piece = RemovePiece(Board, to - 2);
-            PutPiece(Board, piece, from - 1);
+            piece = RemovePiece(Board, to - 2, TRUE);
+            PutPiece(Board, piece, from - 1, TRUE);
         }
     }
-
-#if FLAG_CHECKS
-    // update check status
-    if (moveflag & MOVE_CHECK)
-        Board->inCheck = TRUE;
-    else
-        Board->inCheck = FALSE;
-#endif
 
     // update castle status
     if (Board->castles)
@@ -742,16 +725,14 @@ PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             pIndex += 6;
         dwSignature ^= aPArray[pIndex][to];
 
-        RemovePiece(Board, to);
-        PutPiece(Board, my_color | (moveflag & MOVE_PIECEMASK), to);
+        RemovePiece(Board, to, TRUE);
+        PutPiece(Board, my_color | (moveflag & MOVE_PIECEMASK), to, TRUE);
         Board->phase += (nPiecePhaseVals[PIECEOF(moveflag & MOVE_PIECEMASK)]);
     }
 
-#if !FLAG_CHECKS
     Board->inCheck = BBKingInDanger(Board, OPPONENT(Board->sidetomove));
     if (Board->inCheck)
         move_to_make->moveflag |= MOVE_CHECK;
-#endif
 
     Board->sidetomove = OPPONENT(Board->sidetomove);
 
@@ -761,8 +742,6 @@ PieceType BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
     assert(Board->signature == GetBBSignature(Board));
 	assert(VerifyWood(Board));
 #endif
-
-	return (PieceType)captured_piece;
 }
 
 /*========================================================================
@@ -782,10 +761,10 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
 
     save_undo = &move_to_unmake->save_undo;
 
-    frompiece = RemovePiece(Board, to);
-    PutPiece(Board, frompiece, from);
+    frompiece = RemovePiece(Board, to, TRUE);
+    PutPiece(Board, frompiece, from, TRUE);
     if (save_undo->captured_piece)
-        PutPiece(Board, save_undo->captured_piece, save_undo->capture_square);
+        PutPiece(Board, save_undo->captured_piece, save_undo->capture_square, TRUE);
 
     Board->castles = save_undo->castle_status;
     Board->epSquare = save_undo->en_passant_pawn;
@@ -798,8 +777,8 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
 
     if (move_to_unmake->moveflag & MOVE_PROMOTED)
     {
-        RemovePiece(Board, from);
-        PutPiece(Board, which_color | PAWN, from);
+        RemovePiece(Board, from, TRUE);
+        PutPiece(Board, which_color | PAWN, from, TRUE);
         Board->phase -= (nPiecePhaseVals[PIECEOF(move_to_unmake->moveflag & MOVE_PIECEMASK)]);
     }
 
@@ -809,13 +788,13 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
 
         if (COLOROF(Board->squares[from]) == XWHITE)
         {
-            piece = RemovePiece(Board, BB_F1);
-            PutPiece(Board, piece, BB_H1);
+            piece = RemovePiece(Board, BB_F1, TRUE);
+            PutPiece(Board, piece, BB_H1, TRUE);
         }
         else
         {
-            piece = RemovePiece(Board, BB_F8);
-            PutPiece(Board, piece, BB_H8);
+            piece = RemovePiece(Board, BB_F8, TRUE);
+            PutPiece(Board, piece, BB_H8, TRUE);
         }
     }
     else if (move_to_unmake->moveflag & MOVE_OOO)
@@ -824,13 +803,13 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
 
         if (COLOROF(Board->squares[from]) == XWHITE)
         {
-            piece = RemovePiece(Board, BB_D1);
-            PutPiece(Board, piece, BB_A1);
+            piece = RemovePiece(Board, BB_D1, TRUE);
+            PutPiece(Board, piece, BB_A1, TRUE);
         }
         else
         {
-            piece = RemovePiece(Board, BB_D8);
-            PutPiece(Board, piece, BB_A8);
+            piece = RemovePiece(Board, BB_D8, TRUE);
+            PutPiece(Board, piece, BB_A8, TRUE);
         }
     }
 

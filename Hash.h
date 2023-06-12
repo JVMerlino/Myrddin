@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -56,22 +56,7 @@ typedef struct EVAL_HASH_ENTRY
 #define HASH_EXACT			(0x40)
 #define HASH_MATE_THREAT	(0x01)
 
-extern HASH_ENTRY  *HashTable;
-extern EVAL_HASH_ENTRY  *EvalHashTable;
-
 extern size_t	dwHashSize;
-
-//extern short	nHashAge;
-
-extern int		nHashBails;
-extern int		nHashSaves;
-extern int		nHashHits;
-extern int		nHashProbes;
-extern int		nHashReturns;
-
-extern int	nEvalHashProbes;
-extern int	nEvalHashHits;
-extern int	nEvalHashSaves;
 
 HASH_ENTRY *InitHash(void);
 void		ClearHash(void);

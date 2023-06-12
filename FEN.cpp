@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -16,14 +16,12 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
-#include <windows.h>
 #include <ctype.h>
-
 #include "Myrddin.h"
 #include "Bitboards.h"
 #include "Fen.h"
-#include "Eval.h"
 #include "MoveGen.h"
+#include "Eval.h"
 
 char	ePieceLabel[NPIECES] = {'K', 'Q', 'R', 'B', 'N', 'P'};
 char	*ForsytheSymbols = "KQRBNP";
@@ -94,7 +92,7 @@ void BBCharacterizeBoard(BB_BOARD *Board)
 ** ForsytheToBoard - Converts a FEN string to a board
 **========================================================================
 */
-int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board, int *starting_move_number)
+int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board)
 {
     int			row = 0;
     int			col = 0;
@@ -103,10 +101,13 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board, int *starting_move_nu
     char        temp_str[256];
     PieceType   temp_castle_status, piece;
     ColorType	color;
+#if USE_INCREMENTAL_PST
+	int			pst_square, mult;
+#endif
 
     strcpy(temp_str, forsythe_str);
 
-    memset(Board, 0, sizeof(BB_BOARD));
+    ZeroMemory(Board, sizeof(BB_BOARD));
 
     search = strtok(temp_str, " ");
 
@@ -146,26 +147,61 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board, int *starting_move_nu
 
             Board->squares[square] = piece | ((color == WHITE) ? XWHITE : XBLACK);
 			IS_PIECE_OK(piece);
+
+#if USE_INCREMENTAL_PST
+			pst_square = square;
+			mult = 1;
+			if (color == BLACK)
+			{
+				pst_square = pst_square ^ 56;
+				mult = -1;
+			}
+#endif
+
             switch (piece)
             {
-            case KING:
-                SetBit(&Board->bbPieces[KING][color], square);
-                break;
-            case QUEEN:
-                SetBit(&Board->bbPieces[QUEEN][color], square);
-                break;
-            case ROOK:
-                SetBit(&Board->bbPieces[ROOK][color], square);
-                break;
-            case BISHOP:
-                SetBit(&Board->bbPieces[BISHOP][color], square);
-                break;
-            case KNIGHT:
-                SetBit(&Board->bbPieces[KNIGHT][color], square);
-                break;
-            case PAWN:
-                SetBit(&Board->bbPieces[PAWN][color], square);
-                break;
+				case KING:
+					SetBit(&Board->bbPieces[KING][color], square);
+#if USE_INCREMENTAL_PST
+					Board->mgPST += PST[KING][pst_square] * mult;
+					Board->egPST += PST[KING + 6][pst_square] * mult;
+#endif
+					break;
+				case QUEEN:
+					SetBit(&Board->bbPieces[QUEEN][color], square);
+#if USE_INCREMENTAL_PST
+					Board->mgPST += PST[QUEEN][pst_square] * mult;
+					Board->egPST += PST[QUEEN + 6][pst_square] * mult;
+#endif
+					break;
+				case ROOK:
+					SetBit(&Board->bbPieces[ROOK][color], square);
+#if USE_INCREMENTAL_PST
+					Board->mgPST += PST[ROOK][pst_square] * mult;
+					Board->egPST += PST[ROOK + 6][pst_square] * mult;
+#endif
+					break;
+				case BISHOP:
+					SetBit(&Board->bbPieces[BISHOP][color], square);
+#if USE_INCREMENTAL_PST
+					Board->mgPST += PST[BISHOP][pst_square] * mult;
+					Board->egPST += PST[BISHOP + 6][pst_square] * mult;
+#endif
+					break;
+				case KNIGHT:
+					SetBit(&Board->bbPieces[KNIGHT][color], square);
+#if USE_INCREMENTAL_PST
+					Board->mgPST += PST[KNIGHT][pst_square] * mult;
+					Board->egPST += PST[KNIGHT + 6][pst_square] * mult;
+#endif
+					break;
+				case PAWN:
+					SetBit(&Board->bbPieces[PAWN][color], square);
+#if USE_INCREMENTAL_PST
+					Board->mgPST += PST[PAWN][pst_square] * mult;
+					Board->egPST += PST[PAWN + 6][pst_square] * mult;
+#endif
+					break;
             }
 
             if ((piece != KING) && (piece != PAWN))
@@ -176,6 +212,8 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board, int *starting_move_nu
 
         ++search;
     }
+
+//	printf("mg = %d, eg = %d\n", Board->mgPST, Board->egPST);
 
     Board->bbMaterial[WHITE] = Board->bbPieces[KING][WHITE] | Board->bbPieces[QUEEN][WHITE] | Board->bbPieces[ROOK][WHITE] |
                                Board->bbPieces[BISHOP][WHITE] | Board->bbPieces[KNIGHT][WHITE] | Board->bbPieces[PAWN][WHITE];
@@ -208,33 +246,23 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board, int *starting_move_nu
     {
         switch (*search)
         {
-        case 'K':
-            if (!(Board->castles & WHITE_KINGSIDE_BIT))
-                return -1;
-            temp_castle_status |= WHITE_KINGSIDE_BIT;
-            break;
+			case 'K':
+				temp_castle_status |= WHITE_KINGSIDE_BIT;
+				break;
 
-        case 'Q':
-            if (!(Board->castles & WHITE_QUEENSIDE_BIT))
-                return -1;
-            temp_castle_status |= WHITE_QUEENSIDE_BIT;
-            break;
+			case 'Q':
+				temp_castle_status |= WHITE_QUEENSIDE_BIT;
+				break;
 
-        case 'k':
-            if (!(Board->castles & BLACK_KINGSIDE_BIT))
-                return -1;
-            temp_castle_status |= BLACK_KINGSIDE_BIT;
-            break;
+			case 'k':
+				temp_castle_status |= BLACK_KINGSIDE_BIT;
+				break;
 
-        case 'q':
-            if (!(Board->castles & BLACK_QUEENSIDE_BIT))
-                return -1;
-            temp_castle_status |= BLACK_QUEENSIDE_BIT;
-            break;
-
-        default:
-            return -1;
+			case 'q':
+				temp_castle_status |= BLACK_QUEENSIDE_BIT;
+				break;
         }
+
         ++search;
     }
 
@@ -271,10 +299,6 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board, int *starting_move_nu
     search = strtok(NULL, " ");
     if (search == NULL)
         return 0;
-
-    *starting_move_number = atoi(search);
-    if (*starting_move_number < 1)
-        *starting_move_number = 1;
 
     return 0;
 }

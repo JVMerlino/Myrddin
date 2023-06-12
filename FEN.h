@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -23,5 +23,5 @@ extern char *ForsytheSymbols;
 
 char *BBSquareName(SquareType square, char *buffer);
 
-int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board, int *starting_move_number);
+int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board);
 char *BBBoardToForsythe(BB_BOARD *Board, int move_number, char *buffer);

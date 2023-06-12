@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2021  John Merlino
+Copyright(C) 2023  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 typedef unsigned __int64 Bitboard;
 
-enum SQUARE_BITS {
+enum SQUARES {
     BB_A8 = 0, BB_B8, BB_C8, BB_D8, BB_E8, BB_F8, BB_G8, BB_H8,
     BB_A7, BB_B7, BB_C7, BB_D7, BB_E7, BB_F7, BB_G7, BB_H7,
     BB_A6, BB_B6, BB_C6, BB_D6, BB_E6, BB_F6, BB_G6, BB_H6,
@@ -34,6 +34,8 @@ enum SQUARE_BITS {
     BB_A2, BB_B2, BB_C2, BB_D2, BB_E2, BB_F2, BB_G2, BB_H2,
     BB_A1, BB_B1, BB_C1, BB_D1, BB_E1, BB_F1, BB_G1, BB_H1,
 };
+
+extern int VFlipSquare[];
 
 #define BB_RANK_8       0x00000000000000FFULL
 #define BB_RANK_7       0x000000000000FF00ULL
@@ -53,6 +55,8 @@ enum SQUARE_BITS {
 #define BB_FILE_G       0x4040404040404040ULL
 #define BB_FILE_H       0x8080808080808080ULL
 
+#define BB_EMPTY		0x0000000000000000ULL
+
 enum files {FILE_A = 0, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H};
 enum ranks {RANK_8 = 0, RANK_7, RANK_6, RANK_5, RANK_4, RANK_3, RANK_2, RANK_1};
 
@@ -64,6 +68,7 @@ enum ranks {RANK_8 = 0, RANK_7, RANK_6, RANK_5, RANK_4, RANK_3, RANK_2, RANK_1};
 #define IS_COLOR_OK(color)  assert(color == 1 || color == 0)
 
 extern Bitboard Bit[64];
+extern Bitboard wkc, wqc, bkc, bqc;
 extern BOOL		bPopcnt;
 
 // common inline functions
@@ -99,6 +104,11 @@ __inline Bitboard SqToBB(int sq)  // return set bit corresponding with sq
 {
 	IS_SQ_OK(sq);
     return ((Bitboard)1 << (sq));
+}
+
+__inline int SqNameToSq(char* sqName)
+{
+    return(('8' - *(sqName + 1)) * 8) + (*sqName - 'a');
 }
 
 __inline void SetBit(Bitboard *bb, int sq)
@@ -178,12 +188,16 @@ typedef struct BB_BOARD {
     PosSignature	pawnsignature;
 #endif
     int		squares[64];	// uses piece representation from 0x88 implementation (XWHITE or XBLACK)
-    int     phase;
-    int		sidetomove;
-    int		castles;
-    int		epSquare;
-    int		fifty;
-    int		inCheck;
+	int		epSquare;
+	int     phase;
+	BOOL	inCheck;
+	int 	castles;
+	int 	fifty;
+	int 	sidetomove;
+#if USE_INCREMENTAL_PST
+	int		mgPST;
+	int		egPST;
+#endif
 } BB_BOARD;
 
 extern BB_BOARD	bbBoard;
@@ -195,11 +209,11 @@ extern Bitboard bbKingMoves[64];
 extern Bitboard bbPassedPawnMask[2][64];
 extern Bitboard bbDiagonalMoves[64];
 extern Bitboard bbStraightMoves[64];
-
+extern Bitboard bbBetween[8][8];
 extern Bitboard RankMask[8], FileMask[8];
 
-int RemovePiece(BB_BOARD *Board, int square);
-void PutPiece(BB_BOARD *Board, int piece, int square);
+int RemovePiece(BB_BOARD *Board, int square, BOOL bUpdatePST);
+void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdatePST);
 DWORD BitScan(Bitboard b);
 void initbitboards(void);
 void bbNewGame(BB_BOARD *bbBoard);
