@@ -1,0 +1,476 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="64-bit Debug|Win32">
+      <Configuration>64-bit Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="64-bit Debug|x64">
+      <Configuration>64-bit Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="64-bit Release|Win32">
+      <Configuration>64-bit Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="64-bit Release|x64">
+      <Configuration>64-bit Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{295FA678-A2D8-42EF-A280-A54491D30392}</ProjectGuid>
+    <RootNamespace>Myrddin</RootNamespace>
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC71.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug32\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|Win32'">Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Debug\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|x64'">Debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Debug32\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|Win32'">Debug\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Debug\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|x64'">Debug\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|Win32'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|x64'">true</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release32\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='64-bit Release|Win32'">Release\</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'">Release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Release32\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Release\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='64-bit Release|Win32'">Release\</IntDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'">Release\</IntDir>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='64-bit Release|Win32'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'">false</LinkIncremental>
+    <EmbedManifest Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'">false</EmbedManifest>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>/fixed:no %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)Myrddin.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>/fixed:no %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)Myrddin.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+      <Profile>true</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>/fixed:no %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)Myrddin.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|x64'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN64;_WIN64;_DEBUG;_CONSOLE;Z_PREFIX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AdditionalIncludeDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\sysport;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\huffman;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\liblzf;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\lzma;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+    </ClCompile>
+    <Link>
+      <AdditionalOptions>/fixed:no %(AdditionalOptions)</AdditionalOptions>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <ProgramDatabaseFile>$(OutDir)Myrddin.pdb</ProgramDatabaseFile>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <GenerateMapFile>true</GenerateMapFile>
+      <StackReserveSize>10000000</StackReserveSize>
+      <StackCommitSize>10000000</StackCommitSize>
+      <Profile>true</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <CustomBuildStep>
+      <Outputs>copy TargetPath C:\Program Files\WinBoard-4.2.7\Myrddin;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <ClCompile>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;Z_PREFIX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CompileAs>CompileAsCpp</CompileAs>
+      <AdditionalIncludeDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <FixedBaseAddress>
+      </FixedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+      <MidlCommandFile>/env win32</MidlCommandFile>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;gavlib.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>libcmt.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <CustomBuildStep>
+      <Outputs>copy TargetPath C:\Program Files\WinBoard-4.2.7\Myrddin;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <ClCompile>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <FixedBaseAddress>
+      </FixedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <MidlCommandFile>/env win64</MidlCommandFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Release|Win32'">
+    <CustomBuildStep>
+      <Outputs>copy TargetPath C:\Program Files\WinBoard-4.2.7\Myrddin;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <ClCompile>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <PreprocessorDefinitions>WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <BufferSecurityCheck>true</BufferSecurityCheck>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level4</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CompileAs>CompileAsCpp</CompileAs>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <FixedBaseAddress>
+      </FixedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <TargetMachine>MachineX86</TargetMachine>
+      <MidlCommandFile>/env win64</MidlCommandFile>
+      <Profile>true</Profile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'">
+    <CustomBuildStep>
+      <Outputs>copy TargetPath C:\Program Files\WinBoard-4.2.7\Myrddin;%(Outputs)</Outputs>
+    </CustomBuildStep>
+    <ClCompile>
+      <WarningLevel>Level4</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN64;_WIN64;NDEBUG;_CONSOLE;Z_PREFIX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <CompileAs>Default</CompileAs>
+      <AdditionalIncludeDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FloatingPointExceptions>false</FloatingPointExceptions>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+    </ClCompile>
+    <Link>
+      <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <FixedBaseAddress>
+      </FixedBaseAddress>
+      <DataExecutionPrevention>
+      </DataExecutionPrevention>
+      <MidlCommandFile>/env win64</MidlCommandFile>
+      <AdditionalDependencies>kernel32.lib;user32.lib;%(AdditionalDependencies);gtb.lib;lbfgs.lib</AdditionalDependencies>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+      <AdditionalLibraryDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb\lib\Release;C:\Users\John\Documents\Visual Studio Projects\liblbfgs-1.10\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <StackReserveSize>10485760</StackReserveSize>
+      <StackCommitSize>10485760</StackCommitSize>
+      <Profile>true</Profile>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman\hzip.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf_c.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf_d.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Alloc.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Bra86.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzFind.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Dec.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Enc.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaDec.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaEnc.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\wrap.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\adler32.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\crc32.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\deflate.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\infback.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inffast.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inflate.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inftrees.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\trees.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\uncompr.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zcompress.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zutil.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-att.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-dec.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-probe.c" />
+    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport\sysport.c" />
+    <ClCompile Include="BBEval.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="BBMoveGen.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="BBThink.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Bitboards.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="book.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="FEN.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Hash.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="magicmoves.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="Myrddin.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+    <ClCompile Include="TBProbe.cpp">
+      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="PArray.inc" />
+    <None Include="VTune\Myrddin.vpj" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman\hzip.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzfP.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Alloc.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Bra.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzFind.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzFindMt.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzHash.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Dec.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Enc.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaDec.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaEnc.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Types.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\wrap.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\crc32.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\deflate.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inffast.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inffixed.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inflate.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inftrees.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\trees.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zconf.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zconf.in.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zlib.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zutil.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-att.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-dec.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-probe.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-types.h" />
+    <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport\sysport.h" />
+    <ClInclude Include="lbfgs.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
