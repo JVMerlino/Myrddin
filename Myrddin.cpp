@@ -17,42 +17,31 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 // Myrddin chess engine written by John Merlino, with lots of inspiration, assistance and patience (and perhaps some code) by:
-// Ron Murawski -- Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's site)
-// Martin Sedlak -- Cheng (guided me through tuning)
+// Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's site)
 // Lars Hallerstrom - The Mad Tester!
-// Dann Corbit (helped bring the first bitboard version of Myrddin to release)
-// Bruce Moreland -- Gerbil (well-documented code on his website taught me the basics)
-// Tom Kerrigan -- TSCP (a great starting point)
-// Dr. Robert Hyatt -- Crafty (helped us all)
-// Ed Schröder and Jeroen Noomen -- ProDeo Opening Book
-// Andres Valverde -- EveAnn and part of the Dirty team
+// David Carteau - Orion and Cerebrum (provided Cerebrum NN library)
+// Martin Sedlak - Cheng (guided me through Texel tuning)
+// Dann Corbit - Helped bring the first bitboard version of Myrddin to release
+// Bruce Moreland - Gerbil (well-documented code on his website taught me the basics)
+// Tom Kerrigan - TSCP (a great starting point)
+// Dr. Robert Hyatt - Crafty (helped us all)
+// Ed Schröder and Jeroen Noomen - ProDeo Opening Book
+// Andres Valverde - EveAnn and part of the Dirty team
 // Pradu Kannan - Magicmoves bitboard move generator for sliding pieces
-// Vladimir Medvedev -- Greko (showed how strong a small, simple program could be)
-// The Chessmaster Team -- Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
+// Vladimir Medvedev - Greko (showed how strong a small, simple program could be)
+// The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// fixed two bugs in SEE (stopped the calculation if the first capture was of equal value, and failed to include Kings in the calculation)
-// fixed a bug that could cause a save to the hash table even if there was no best move
-// tuned PST files for the first time, and re-tuned all other eval terms
-// captures with negative SEE value can now be reduced
-// IID is now more aggressive in its depth reduction and can be applied in PV nodes
-// LMR reduction is now one depth less for PV nodes
-// no longer limiting the number of extensions for a single branch
-// reduced the number of aspiration windows before performing a full-width search from six to two
-// fixed a rare bug such that if a tt probe or IID returned an underpromotion it would not be moved to the front of the movelist
-// fixed an issue when receiving the "force" command while pondering, which can happen with some GUIs
-// various minor optimizations
-// added "see" command to return the SEE value of a capture on the current position - example usage "see d4 e5"
-// added "rpt" command to run a brief perft test (perft uses bulk counting)
-// removed "-64" from version string as there is no longer a 32-bit version
+// added NNUE probing code by David Carteau (Orion / Cerebrum)
+// network created by me using games from CCRL, Lichess, and Myrddin testing (both self-play and against other engines)
+// fixed a rare bug that could cause the best move from the previous iteration to not be the first move searched
+// if perft or divide are called with no parameters, the default depth will be one (and Myrddin will no longer crash)
 //
 // TODO -- in no particular order
-// get pondering move after search ends with a fail
 
 #include <conio.h>
 #include <signal.h>
 #include <direct.h>
-#include <sys/types.h>
 #include <sys/timeb.h>
 #include "myrddin.h"
 #include "Bitboards.h"
@@ -65,22 +54,21 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include "tbprobe.h"
 #include "gtb-probe.h"
 #include "magicmoves.h"
+#include "cerebrum.h"
 
-char	*szVersion = "Myrddin 0.90";
-char	*szInfo = "(6/9/23)";
+char	*szVersion = "Myrddin 0.91";
+char	*szInfo = "(10/20/24)";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
 // initialization file settings
 BOOL 			bLog=FALSE;
 BOOL			bKibitz=FALSE;
-BOOL			bEval=FALSE;
 BOOL			bSlave=FALSE;
 int				nCPUs = 1;
 int				nEGTBCompressionType=tb_CP4;
 char			szEGTBPath[MAX_PATH];
 BOOL			bNoTB = FALSE;
-int				nResignVal = 0, nResignMoves = 0;
 
 // other (evil) globals
 unsigned int	nGameMove;
@@ -89,10 +77,10 @@ int				nCompSide;
 unsigned int	nThinkTime, nPonderTime, nFischerInc, nLevelMoves, nMovesBeforeControl;
 int				nClockRemaining;	// needs to be signed because it can be temporarily negative when calculating time to think
 unsigned int	nCheckNodes;
-CHESSMOVE		cmBestMove, cmPonderMove;
+CHESSMOVE		cmChosenMove, cmPonderMove;
 BB_BOARD		bbPonderRestore;
 clock_t			nThinkStart;
-BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth, bTuning;
+BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth;
 int				nEngineMode, nEngineCommand;
 PosSignature	dwInitialPosSignature;
 FILE		   *logfile;
@@ -100,6 +88,8 @@ char			line[512], command[512];
 int				is_pipe = 0;
 HANDLE			input_handle = 0;
 int				nSlaveNum = -1;
+
+extern NN_Accumulator accumulator;
 
 #if USE_SMP
 char			szProgName[MAX_PATH];
@@ -112,20 +102,7 @@ STARTUPINFO		si;
 PROCESS_INFORMATION	pi[MAX_CPUS];
 #endif
 
-PieceType		BackRank[BSIZE] = {ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK};
-
-// tuning data
-#if USE_GRANT_SET
-double  K = 1.1871;
-char TuningFile[32] = "granttuning.epd";
-#elif USE_LICHESS_SET
-double  K = 1.3118;
-char TuningFile[32] = "lichess-big3-resolved.epd";
-#else
-double  K = 1.3931;
-char TuningFile[32] = "quiet-labeled.epd";
-#endif
-
+const PieceType	BackRank[BSIZE] = {ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK};
 
 #if USE_SMP
 /*========================================================================
@@ -185,27 +162,6 @@ void ZeroSlaveNodes(void)
 #endif
 
 /*========================================================================
-** LogPST - prints the PST tables to the logfile
-**========================================================================
-*/
-void LogPST(void)
-{
-	int x, y;
-
-	for (x = 0; x < 14; x++)
-	{
-		fprintf(logfile, "{");
-		for (y = 0; y < 64; y++)
-		{
-			if (y % 8 == 0)
-				fprintf(logfile, "\n\t");
-			fprintf(logfile, "%3d, ", PST[x][y]);
-		}
-		fprintf(logfile, "\n},\n");
-	}
-}
-
-/*========================================================================
 ** ParseIniFile -- Handle commands from the initialization file
 **========================================================================
 */
@@ -235,11 +191,6 @@ void ParseIniFile(void)
         {
             // "kibitz" -- valid values: 1 = kibitz PV output, 0 = do not kibitz PV output
             bKibitz = (command[7] == '1');
-        }
-        else if (strnicmp(command, "resign=", 7) == 0)
-        {
-            // "resign" -- valid values: 1 = allow resigning, 0 = do not allow resigning
-            nResignVal = atoi(&command[7]);
         }
 #if USE_HASH
         else if (strnicmp(command, "hashsize=", 9) == 0)
@@ -491,18 +442,18 @@ char *MoveToString(char *moveString, CHESSMOVE *move, BOOL bAddMove)
 
         switch (promotedPiece)
         {
-        case QUEEN:
-            strcat(moveString, "Q");
-            break;
-        case ROOK:
-            strcat(moveString, "R");
-            break;
-        case BISHOP:
-            strcat(moveString, "B");
-            break;
-        case KNIGHT:
-            strcat(moveString, "N");
-            break;
+			case QUEEN:
+				strcat(moveString, "Q");
+				break;
+			case ROOK:
+				strcat(moveString, "R");
+				break;
+			case BISHOP:
+				strcat(moveString, "B");
+				break;
+			case KNIGHT:
+				strcat(moveString, "N");
+				break;
         }
     }
 
@@ -594,11 +545,6 @@ void bbNewGame(BB_BOARD *bbBoard)
         bbBoard->squares[x + 56] = XWHITE|BackRank[x];
     }
 
-#if 0
-    bbBoard->kingsquares[WHITE] = BB_E1;
-    bbBoard->kingsquares[BLACK] = BB_E8;
-#endif
-
     bbBoard->sidetomove = WHITE;
 
     bbBoard->castles = WHITE_KINGSIDE_BIT | WHITE_QUEENSIDE_BIT | BLACK_KINGSIDE_BIT | BLACK_QUEENSIDE_BIT;
@@ -606,10 +552,8 @@ void bbNewGame(BB_BOARD *bbBoard)
     bbBoard->fifty = 0;
     bbBoard->inCheck = FALSE;
     bbBoard->signature = GetBBSignature(bbBoard);
-    bbBoard->phase = TOTAL_PHASE;
-#if USE_PAWN_HASH
-    bbBoard->pawnsignature = GetBBPawnSignature(bbBoard);
-#endif
+
+	nn_update_all_pieces(accumulator, bbBoard->bbPieces);
 
     ZeroMemory(cmGameMoveList, sizeof(cmGameMoveList));
     nGameMove = 0;
@@ -793,9 +737,8 @@ void	HandleCommand(void)
 		}
         bbBoard.inCheck = BBKingInDanger(&bbBoard, bbBoard.sidetomove);
         dwInitialPosSignature = bbBoard.signature = GetBBSignature(&bbBoard);
-#if USE_PAWN_HASH
-        bbBoard.pawnsignature = GetBBPawnSignature(&bbBoard);
-#endif
+
+		nn_update_all_pieces(accumulator, bbBoard.bbPieces);
 
 #if 0
         WORD	x = 0;
@@ -860,7 +803,7 @@ void	HandleCommand(void)
 			return;
 #endif
 
-        int	depth;
+        int	depth = 0;
         clock_t	starttime;
 
         if (nEngineMode == ENGINE_THINKING || nEngineMode == ENGINE_ANALYZING || nEngineMode == ENGINE_PONDERING)
@@ -871,6 +814,9 @@ void	HandleCommand(void)
 		}
 
         sscanf(line, "%s %d", command, &depth);
+
+		if (depth <= 0)
+			depth = 1;
 
         starttime = GetTickCount();
         nPerftMoves = doBBPerft(depth, &bbBoard, FALSE);
@@ -907,6 +853,9 @@ void	HandleCommand(void)
 
         sscanf(line, "%s %d", command, &depth);
 
+		if (depth <= 0)
+			depth = 1;
+
 #if USE_BULK_COUNTING
 		printf("Using bulk counting...\n");
 #endif
@@ -937,9 +886,6 @@ void	HandleCommand(void)
 			BBForsytheToBoard(perft_tests[x].fen, &bbBoard);
 			bbBoard.inCheck = BBKingInDanger(&bbBoard, bbBoard.sidetomove);
 			dwInitialPosSignature = bbBoard.signature = GetBBSignature(&bbBoard);
-#if USE_PAWN_HASH
-			bbBoard.pawnsignature = GetBBPawnSignature(&bbBoard);
-#endif
 
 			printf("%d) %s - ", x+1, perft_tests[x].fen);
 			starttime = GetTickCount();
@@ -973,29 +919,24 @@ void	HandleCommand(void)
 
         int	nResult;
 
-        bEval = TRUE;
-
 #if USE_EGTB
-        if (BitCount(bbBoard.bbOccupancy) <= 5)
-        nResult = GaviotaTBProbe(&bbBoard, FALSE);
+        if (tb_available && (BitCount(bbBoard.bbOccupancy) <= 5))
+			nResult = GaviotaTBProbe(&bbBoard, FALSE);
         else
 #endif
-        nResult = BBEvaluate(&bbBoard, -INFINITY, INFINITY);
+			nResult = BBEvaluate(&bbBoard, -CHECKMATE-1, CHECKMATE+1);
 
         printf("score = %d\n", nResult);
 
         if (bbBoard.sidetomove == BLACK)
-        nResult *= -1;
+			nResult *= -1;
 
-        printf("static evaluation of %s = %d, sig = %016I64X\n", BBBoardToForsythe(&bbBoard, 0, line),
-        nResult, GetBBSignature(&bbBoard));
+        printf("static evaluation of %s = %d, sig = %016I64X\n", BBBoardToForsythe(&bbBoard, 0, line), nResult, GetBBSignature(&bbBoard));
 
         PromptForInput();
 
         if (bLog)
         fprintf(logfile, "< Finished eval\n");
-
-        bEval = FALSE;
 
         return;
     }
@@ -1030,110 +971,6 @@ void	HandleCommand(void)
 
         return;
     }
-
-	// for hand-tuning non-PST eval terms
-    if (!strcmp(command, "tune"))
-    {
-		double	E;
-        extern int mg, eg, og;
-
-		bTuning = TRUE;
-		for (mg = 0; mg <= 0; mg++)
-        {
-            for (eg = 0; eg <= 0; eg++)
-            {
-                for (og = 0; og <= 0; og++)
-                {
-//                  for (K = 1.311; K <= 1.313; K += 0.0001)
-                    {
-                        printf("%d/%d/%d, %f ", og, mg, eg, K);
-						E = EPDTune(TuningFile, K);
-						printf("E = %f\n", E);
-                    }
-                }
-            }
-        }
-
-		bTuning = FALSE;
-		PromptForInput();
-
-        return;
-    }
-
-	// for automatically tuning all PST values
-	if (!strcmp(command, "tunepst"))
-	{
-		double	E, best;
-		int		inc, orig;
-		int		pst, sq;
-		BOOL	done;
-		char	sqname[8];
-
-		bTuning = TRUE;
-		best = EPDTune(TuningFile, K);
-		printf("original best = %f\n", best);
-
-		for (pst = 13; pst <= 13; pst++)
-		{
-			for (sq = 8; sq < 48; sq++)
-			{
-				printf("starting pst %d, sq %d at %d\n", pst, sq, PST[pst][sq]);
-				orig = PST[pst][sq];
-				done = FALSE;
-				inc = 1;	// start by increasing the val
-
-				while (!done)
-				{
-					PST[pst][sq] += inc;
-					printf("\t testing val %d = ", PST[pst][sq]);
-					E = EPDTune(TuningFile, K);
-					printf("%f\n", E);
-
-					if (E >= best)	// worse value
-					{
-						if (inc == 1)
-						{
-							if (PST[pst][sq] == orig + 1)
-							{
-								inc = -1;
-								PST[pst][sq] = orig;
-							}
-							else
-							{
-								PST[pst][sq]--;
-								done = TRUE;
-							}
-						}
-						else  // decreasing the val
-						{
-							if (PST[pst][sq] == orig - 1)
-							{
-								PST[pst][sq] = orig;
-								done = TRUE;
-							}
-							else
-							{
-								PST[pst][sq]++;
-								done = TRUE;
-							}
-						}
-					}
-					else
-						best = E;
-				}
-
-				printf("final val for %d, %d = %d\n", pst, sq, PST[pst][sq]);
-				BBSquareName(sq, sqname);
-				fprintf(logfile, "final val for %d, %s = %d\n", pst, sqname, PST[pst][sq]);
-			}
-		}
-
-		bTuning = FALSE;
-		LogPST();
-		PromptForInput();
-
-		return;
-	}
 
 	if (!strcmp(command, "tb"))
 	{
@@ -1467,7 +1304,7 @@ void	HandleCommand(void)
         else
             nClockRemaining = nTime * 10;
 
-        nClockRemaining -= 2000;	// use a "bank" of two seconds, primarily for bullet time controls
+        nClockRemaining -= TIME_BANK;	// use a "bank" of two seconds, primarily for bullet time controls
         if (nClockRemaining <= 0)
             nClockRemaining = 0;
 
@@ -1856,7 +1693,7 @@ void	HandleCommand(void)
 ** PrintPV -- Display a PV
 **========================================================================
 */
-void PrintPV(int nPVEval, int nSideToMove, char *comment, BOOL bPrintKibitz)
+void PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz)
 {
     int			n;
     char		moveString[24];
@@ -1891,10 +1728,14 @@ void PrintPV(int nPVEval, int nSideToMove, char *comment, BOOL bPrintKibitz)
 
         PVMoveToString(moveString, &evalPV.pv[n], FALSE);
         strcat(buf, moveString);
-        if (n == 0)
-            strncat(buf, comment, sizeof buf - strlen(buf));
+		if ((n == 0) && comment)
+		{
+			moveString[0] = comment;
+			moveString[1] = '\0';
+			strcat(buf, moveString);
+		}
         strcat(buf, " ");
-		if (*comment)
+		if (comment)
 			break;
 	}
 
@@ -1904,7 +1745,7 @@ void PrintPV(int nPVEval, int nSideToMove, char *comment, BOOL bPrintKibitz)
         strcat(buf, moveString);
     }
 
-	if ((abs(nPVEval) >= CHECKMATE - 1024) && (!*comment))
+	if ((abs(nPVEval) >= CHECKMATE - 1024) && (!comment))
 	{
 		if (((CHECKMATE - abs(nPVEval)) / 2) > 0)	// don't announce "Mate in 0"
 		{
@@ -2057,7 +1898,7 @@ int main(void)
 		else
 		{
 			fprintf(logfile, "%s - %-14s\n", szVersion, szInfo);
-			fprintf(logfile, "log=%d, kibitz=%d, resign=%d, hashsize=%lld, egtbcomp=%d, egtbfolder=%s, cores=%d\n", bLog, bKibitz, nResignVal, dwHashSize, nEGTBCompressionType, szEGTBPath, nCPUs);
+			fprintf(logfile, "log=%d, kibitz=%d, hashsize=%lld, egtbcomp=%d, egtbfolder=%s, cores=%d\n", bLog, bKibitz, dwHashSize, nEGTBCompressionType, szEGTBPath, nCPUs);
 		}
     }
 
@@ -2075,7 +1916,7 @@ int main(void)
 	{
 		printf("\n");
 		printf("#-------------------------------#\n");
-		printf("# %s - %-14s #\n", szVersion, szInfo);
+		printf("# %-13s - %-13s #\n", szVersion, szInfo);
 		printf("# Copyright 2023 - John Merlino #\n");
 		printf("# All Rights Reserved           #\n");
 		printf("#-------------------------------#\n\n");
@@ -2101,12 +1942,20 @@ int main(void)
     initbitboards();
     InitThink();
 
+	if (nn_load(NN_FILE) == -1)
+	{
+		printf("Unable to load network data. Cannot continue\n");
+		return(0);
+	}
+
 	if (!bSlave)
 	    INITIALIZE();	// prodeo book
 
 #if USE_EGTB
     if (GaviotaTBInit() == EXIT_FAILURE)
 		bNoTB = TRUE;
+#else
+	tb_available = FALSE;
 #endif
 
     bbNewGame(&bbBoard);
@@ -2188,14 +2037,14 @@ int main(void)
 
                     if (!strnicmp(moveString, bookString, strlen(moveString)))	// we've found our move
                     {
-                        cmBestMove = cmTempMoveList[n];
+						cmChosenMove = cmTempMoveList[n];
 
-                        MoveToString(moveString, &cmBestMove, TRUE);
+                        MoveToString(moveString, &cmChosenMove, TRUE);
                         printf("\n%s\n", moveString);
 #if USE_SMP
 						if (!bSlave)
 						{
-							MoveToString(moveString, &cmBestMove, FALSE);
+							MoveToString(moveString, &cmChosenMove, FALSE);
 							SendSlavesString(moveString);
 						}
 #endif
@@ -2207,9 +2056,9 @@ int main(void)
                         if (bLog)
                             fprintf(logfile, "< book %s\n", moveString);
 
-                        BBMakeMove(&cmBestMove, &bbBoard);
-                        cmBestMove.dwSignature = bbBoard.signature;
-                        cmGameMoveList[nGameMove++] = cmBestMove;
+                        BBMakeMove(&cmChosenMove, &bbBoard);
+						cmChosenMove.dwSignature = bbBoard.signature;
+                        cmGameMoveList[nGameMove++] = cmChosenMove;
                     }
                 }
             }
@@ -2341,7 +2190,7 @@ int main(void)
 
                     nDepth++;
 
-#if USE_SMP         // more aggressive depth adjustment for some child processes
+#if 0 // USE_SMP         // more aggressive depth adjustment for some child processes
                     if (bSlave)
                     {
                         if ((nSlaveNum & 1) == 0)
@@ -2377,14 +2226,14 @@ int main(void)
                 {
                     if ((nEval == INFINITY) || (nEval == -INFINITY))
                         // in case the search for the current depth did not finish with its first move
-                        PrintPV(nPrevPVEval, OPPONENT(bbBoard.sidetomove), "", TRUE);
+                        PrintPV(nPrevPVEval, OPPONENT(bbBoard.sidetomove), '\0', TRUE);
                     else
                     {
-                        PrintPV(nEval, OPPONENT(bbBoard.sidetomove), "", TRUE);
+                        PrintPV(nEval, OPPONENT(bbBoard.sidetomove), '\0', TRUE);
                         nPrevPVEval = nEval;
                     }
 
-                    MoveToString(moveString, &cmBestMove, TRUE);
+                    MoveToString(moveString, &cmChosenMove, TRUE);
 
                     printf("\n%s\n", moveString);
 #if USE_SMP
@@ -2393,19 +2242,19 @@ int main(void)
 						if (!bPondering)
 							SendSlavesString("stop");
 
-						MoveToString(moveString, &cmBestMove, FALSE);
+						MoveToString(moveString, &cmChosenMove, FALSE);
 						SendSlavesString(moveString);
 					}
 #endif
                     fflush(stdout);
 
-                    BBMakeMove(&cmBestMove, &bbBoard);
+                    BBMakeMove(&cmChosenMove, &bbBoard);
 
                     if (bLog)
                         fprintf(logfile, "< %s, nFifty=%d\n", moveString, bbBoard.fifty);
 
-                    cmBestMove.dwSignature = bbBoard.signature;
-                    cmGameMoveList[nGameMove++] = cmBestMove;
+					cmChosenMove.dwSignature = bbBoard.signature;
+                    cmGameMoveList[nGameMove++] = cmChosenMove;
 
                     // checkmate?
                     if (nEval == (CHECKMATE - 1))
@@ -2416,7 +2265,7 @@ int main(void)
                         printf("%s {Checkmate}\n", (nCompSide == WHITE) ? "1-0" : "0-1");
                     }
                     // check for draw
-                    else if (GamePositionRepeated(cmBestMove.dwSignature))
+                    else if (GamePositionRepeated(cmChosenMove.dwSignature))
                     {
                         if (bLog)
                             fprintf(logfile, "1/2-1/2 {Draw by Repetition}\n");
@@ -2436,25 +2285,6 @@ int main(void)
                             fprintf(logfile, "1/2-1/2 {Draw by Insufficient Material}\n");
 
                         printf("1/2-1/2 {Draw by Insufficient Material}\n");
-                    }
-
-                    // check for resign
-                    if (nResignVal >= ROOK_VAL) // don't let a user set the resign val below the value of a rook
-                    {
-                        if (nEval <= -nResignVal)
-                        {
-                            nResignMoves++;
-
-                            if (nResignMoves >= NUM_RESIGN_MOVES)
-                            {
-                                if (bLog)
-                                    fprintf(logfile, "%s {Myrddin resigns}\n", (nCompSide == WHITE) ? "0-1" : "1-0");
-
-                                printf("%s {Myrddin resigns}\n", (nCompSide == WHITE) ? "0-1" : "1-0");
-                            }
-                        }
-                        else
-                            nResignMoves = 0;
                     }
                 }
 
@@ -2561,4 +2391,3 @@ NoPonder:
         }
     }
 }
-

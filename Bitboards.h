@@ -35,7 +35,7 @@ enum SQUARES {
     BB_A1, BB_B1, BB_C1, BB_D1, BB_E1, BB_F1, BB_G1, BB_H1,
 };
 
-extern int VFlipSquare[];
+// extern int VFlipSquare[];
 
 #define BB_RANK_8       0x00000000000000FFULL
 #define BB_RANK_7       0x000000000000FF00ULL
@@ -94,6 +94,7 @@ __inline int Rank(int sq)  // NOTE: ranks are backwards
 #define BBSQ2COLNAME(sq)		((char)('a' + File(sq)))
 #define BBRC2SQUARE(row, col)	((row * 8) + col)
 
+#if 0
 __inline int SqColor(int sq)  // return DARK (0) or LIGHT (1)
 {
 	IS_SQ_OK(sq);
@@ -105,6 +106,7 @@ __inline Bitboard SqToBB(int sq)  // return set bit corresponding with sq
 	IS_SQ_OK(sq);
     return ((Bitboard)1 << (sq));
 }
+#endif
 
 __inline int SqNameToSq(char* sqName)
 {
@@ -166,6 +168,7 @@ __inline int BitCount(Bitboard b)
 #endif
 }
 
+#if 0
 __inline Bitboard GetMSB(Bitboard bb)
 {
     Bitboard	x = bb;
@@ -178,26 +181,19 @@ __inline Bitboard GetMSB(Bitboard bb)
     x |= x >>  1;
     return((x >> 1) + 1);
 }
+#endif
 
 typedef struct BB_BOARD {
     Bitboard	bbPieces[6][2];
     Bitboard	bbMaterial[2];
     Bitboard	bbOccupancy;
     PosSignature	signature;
-#if USE_PAWN_HASH
-    PosSignature	pawnsignature;
-#endif
     int		squares[64];	// uses piece representation from 0x88 implementation (XWHITE or XBLACK)
 	int		epSquare;
-	int     phase;
 	BOOL	inCheck;
 	int 	castles;
 	int 	fifty;
 	int 	sidetomove;
-#if USE_INCREMENTAL_PST
-	int		mgPST;
-	int		egPST;
-#endif
 } BB_BOARD;
 
 extern BB_BOARD	bbBoard;
@@ -212,8 +208,9 @@ extern Bitboard bbStraightMoves[64];
 extern Bitboard bbBetween[8][8];
 extern Bitboard RankMask[8], FileMask[8];
 
-int RemovePiece(BB_BOARD *Board, int square, BOOL bUpdatePST);
-void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdatePST);
+int RemovePiece(BB_BOARD *Board, int square, BOOL bUpdateNN);
+void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN);
+void MovePiece(BB_BOARD* Board, int from, int to, BOOL bUpdateNN);
 DWORD BitScan(Bitboard b);
 void initbitboards(void);
 void bbNewGame(BB_BOARD *bbBoard);

@@ -26,8 +26,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Hash.h"
 #include "parray.inc"
 #include "FEN.h"
+#include "cerebrum.h"
 
-int nPiecePhaseVals[NPIECES] = {0, QUEEN_PHASE, ROOK_PHASE, MINOR_PHASE, MINOR_PHASE, PAWN_PHASE}; 
+#if USE_INCREMENTAL_ACC_UPDATE
+NN_Accumulator	AccStack[MAX_DEPTH];
+int				AccStackIndex = 0;
+#endif
 
 #if VERIFY_BOARD
 /*========================================================================
@@ -55,6 +59,7 @@ BOOL VerifyWood(BB_BOARD *Board)
 }
 #endif
 
+#if 0
 /*========================================================================
 ** GetAllAttackers -- Returns bitboard of all pieces (both colors) attacking
 ** square 'sq'. Includes pinned piece attacks. This may include kings
@@ -78,6 +83,7 @@ Bitboard GetAllAttackers(BB_BOARD *Board, int square)
 
     return(attackers);
 }
+#endif
 
 /*========================================================================
 ** GetAttackers -- Returns bitboard of all enemy pieces attacking square 'sq'
@@ -156,7 +162,6 @@ int	BBScoreCapture(PieceType Capturer, PieceType Captured)
     assert(Captured >= QUEEN && Captured <= PAWN);	// don't allow king captures? IS_PIECE_OK(Captured);
 
     return(CAPTURE_SORT_VAL + (nPieceVals[Captured] * 16) - nPieceVals[Capturer]);
-
 }
 
 /*========================================================================
@@ -190,21 +195,21 @@ void BBGenerateNormalMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *ne
             // get all normal moves for any piece
             switch (piecetype)
             {
-            case BISHOP:
-                moves = Bmagic(square, Board->bbOccupancy);
-                break;
-            case ROOK:
-                moves = Rmagic(square, Board->bbOccupancy);
-                break;
-            case QUEEN:
-                moves = Qmagic(square, Board->bbOccupancy);
-                break;
-            case KNIGHT:
-                moves = bbKnightMoves[square];
-                break;
-            case KING:
-                moves = bbKingMoves[square];
-                break;
+				case BISHOP:
+					moves = Bmagic(square, Board->bbOccupancy);
+					break;
+				case ROOK:
+					moves = Rmagic(square, Board->bbOccupancy);
+					break;
+				case QUEEN:
+					moves = Qmagic(square, Board->bbOccupancy);
+					break;
+				case KNIGHT:
+					moves = bbKnightMoves[square];
+					break;
+				case KING:
+					moves = bbKingMoves[square];
+					break;
             }
 
             // mask out moves that capture piece of same color
@@ -447,10 +452,9 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
         topiece = Board->squares[to];
 
         // adjust the bitboards
-        RemovePiece(Board, from, FALSE);
-        if (topiece)
-            RemovePiece(Board, to, FALSE);
-        PutPiece(Board, frompiece, to, FALSE);
+		if (topiece)
+			RemovePiece(Board, to, FALSE);
+		MovePiece(Board, from, to, FALSE);
 
         // has king moved?
         if (PIECEOF(frompiece) == KING)
@@ -461,15 +465,9 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
         if (flag & MOVE_ENPASSANT)
             RemovePiece(Board, Board->epSquare, FALSE);
         else if (flag & MOVE_OO)
-        {
-            RemovePiece(Board, (color == WHITE ? BB_H1 : BB_H8), FALSE);
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_F1 : BB_F8), FALSE);
-        }
+			MovePiece(Board, (color == WHITE ? BB_H1 : BB_H8), (color == WHITE ? BB_F1 : BB_F8), FALSE);
         else if (flag & MOVE_OOO)
-        {
-            RemovePiece(Board, (color == WHITE ? BB_A1 : BB_A8), FALSE);
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_D1 : BB_D8), FALSE);
-        }
+			MovePiece(Board, (color == WHITE ? BB_A1 : BB_A8), (color == WHITE ? BB_D1 : BB_D8), FALSE);
         else if (flag & MOVE_PROMOTED)
         {
             RemovePiece(Board, to, FALSE);
@@ -480,23 +478,16 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
             legal_move_list[x].moveflag |= MOVE_REJECTED;
 
         // put the bitboards back
-        RemovePiece(Board, to, FALSE);
-        PutPiece(Board, frompiece, from, FALSE);
+		MovePiece(Board, to, from, FALSE);
         if (topiece)
             PutPiece(Board, topiece, to, FALSE);
 
         if (flag & MOVE_ENPASSANT)
             PutPiece(Board, PAWN | (color == WHITE ? XBLACK : XWHITE), Board->epSquare, FALSE);
         else if (flag & MOVE_OO)
-        {
-            RemovePiece(Board, (color == WHITE ? BB_F1 : BB_F8), FALSE);
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_H1 : BB_H8), FALSE);
-        }
+			MovePiece(Board, (color == WHITE ? BB_F1 : BB_F8), (color == WHITE ? BB_H1 : BB_H8), FALSE);
         else if (flag & MOVE_OOO)
-        {
-            RemovePiece(Board, (color == WHITE ? BB_D1 : BB_D8), FALSE);
-            PutPiece(Board, (color == WHITE ? WHITE_ROOK : BLACK_ROOK), (color == WHITE ? BB_A1 : BB_A8), FALSE);
-        }
+			MovePiece(Board, (color == WHITE ? BB_D1 : BB_D8), (color == WHITE ? BB_A1 : BB_A8), FALSE);
         else if (flag & MOVE_PROMOTED)
         {
             RemovePiece(Board, from, FALSE);
@@ -583,6 +574,7 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
     int      		moving_piece = Board->squares[from];
     int				captured_piece = Board->squares[to];
     ColorType		my_color = COLOROF(moving_piece);
+	BOOL			bUpdateAcc = FALSE;
 
     assert(from != to);
     IS_SQ_OK(from);
@@ -598,6 +590,11 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
     save_undo->capture_square = to;
     save_undo->captured_piece = (PieceType)captured_piece;
     save_undo->fifty_move = (BYTE)Board->fifty;
+
+#if USE_INCREMENTAL_ACC_UPDATE
+	memcpy(&AccStack[AccStackIndex++], &accumulator, sizeof(NN_Accumulator));
+	bUpdateAcc = TRUE;
+#endif
 
     // fix the board signature -- other fixes may be necessary later in this function
     dwSignature = save_undo->dwSignature;
@@ -636,10 +633,9 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
         Board->fifty++;
 
     // move the pieces
-    RemovePiece(Board, from, TRUE);
-    if (captured_piece != EMPTY)
-        RemovePiece(Board, to, TRUE);
-    PutPiece(Board, moving_piece, to, TRUE);
+	if (captured_piece != EMPTY)
+		RemovePiece(Board, to, bUpdateAcc);
+	MovePiece(Board, from, to, bUpdateAcc);
 
     if (moveflag & MOVE_ENPASSANT)
     {
@@ -654,7 +650,7 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             pIndex += 6;
         dwSignature ^= aPArray[pIndex][cap_square];
 
-        RemovePiece(Board, cap_square, TRUE);
+        RemovePiece(Board, cap_square, bUpdateAcc);
     }
 
     // check for initial pawn move and set en passant square
@@ -673,8 +669,6 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
     {
         if (moveflag & MOVE_OO)
         {
-            int piece;
-
             pIndex = ROOK;
             if (my_color == XBLACK)
                 pIndex += 6;
@@ -682,13 +676,10 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             dwSignature ^= aPArray[pIndex][to + 1];
             dwSignature ^= aPArray[pIndex][from + 1];
 
-            piece = RemovePiece(Board, to + 1, TRUE);
-            PutPiece(Board, piece, from + 1, TRUE);
+			MovePiece(Board, to + 1, from + 1, bUpdateAcc);
         }
         else if (moveflag & MOVE_OOO)
         {
-            int piece;
-
             pIndex = ROOK;
             if (my_color == XBLACK)
                 pIndex += 6;
@@ -696,8 +687,7 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             dwSignature ^= aPArray[pIndex][to - 2];
             dwSignature ^= aPArray[pIndex][from - 1];
 
-            piece = RemovePiece(Board, to - 2, TRUE);
-            PutPiece(Board, piece, from - 1, TRUE);
+			MovePiece(Board, to - 2, from - 1, bUpdateAcc);
         }
     }
 
@@ -708,10 +698,6 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
         BBUpdateCastleStatus(Board, from, to);
         dwSignature ^= aCSArray[Board->castles];
     }
-
-    // update amount of wood on board if move is capture or promotion
-    if (moveflag & MOVE_CAPTURE)
-        Board->phase -= nPiecePhaseVals[PIECEOF(captured_piece)];
 
     if (moveflag & MOVE_PROMOTED)
     {
@@ -725,9 +711,8 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
             pIndex += 6;
         dwSignature ^= aPArray[pIndex][to];
 
-        RemovePiece(Board, to, TRUE);
-        PutPiece(Board, my_color | (moveflag & MOVE_PIECEMASK), to, TRUE);
-        Board->phase += (nPiecePhaseVals[PIECEOF(moveflag & MOVE_PIECEMASK)]);
+        RemovePiece(Board, to, bUpdateAcc);
+        PutPiece(Board, my_color | (moveflag & MOVE_PIECEMASK), to, bUpdateAcc);
     }
 
     Board->inCheck = BBKingInDanger(Board, OPPONENT(Board->sidetomove));
@@ -754,17 +739,19 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
     assert(Board);
 
     PUNDOMOVE 	save_undo;
-    SquareType   from = move_to_unmake->fsquare;
-    SquareType   to = move_to_unmake->tsquare;
-    int			frompiece;
-    ColorType    which_color = COLOROF(Board->squares[to]);
+    SquareType  from = move_to_unmake->fsquare;
+    SquareType	to = move_to_unmake->tsquare;
+    ColorType   which_color = COLOROF(Board->squares[to]);
 
     save_undo = &move_to_unmake->save_undo;
 
-    frompiece = RemovePiece(Board, to, TRUE);
-    PutPiece(Board, frompiece, from, TRUE);
+#if USE_INCREMENTAL_ACC_UPDATE
+	memcpy(&accumulator, AccStack[--AccStackIndex], sizeof(NN_Accumulator));
+#endif
+
+	MovePiece(Board, to, from, FALSE);
     if (save_undo->captured_piece)
-        PutPiece(Board, save_undo->captured_piece, save_undo->capture_square, TRUE);
+        PutPiece(Board, save_undo->captured_piece, save_undo->capture_square, FALSE);
 
     Board->castles = save_undo->castle_status;
     Board->epSquare = save_undo->en_passant_pawn;
@@ -772,45 +759,25 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
     Board->fifty = save_undo->fifty_move;
     Board->signature = save_undo->dwSignature;
 
-    if (move_to_unmake->moveflag & MOVE_CAPTURE)
-        Board->phase += nPiecePhaseVals[PIECEOF(save_undo->captured_piece)];
-
     if (move_to_unmake->moveflag & MOVE_PROMOTED)
     {
-        RemovePiece(Board, from, TRUE);
-        PutPiece(Board, which_color | PAWN, from, TRUE);
-        Board->phase -= (nPiecePhaseVals[PIECEOF(move_to_unmake->moveflag & MOVE_PIECEMASK)]);
+        RemovePiece(Board, from, FALSE);
+        PutPiece(Board, which_color | PAWN, from, FALSE);
     }
 
     if (move_to_unmake->moveflag & MOVE_OO)
     {
-        int piece;
-
         if (COLOROF(Board->squares[from]) == XWHITE)
-        {
-            piece = RemovePiece(Board, BB_F1, TRUE);
-            PutPiece(Board, piece, BB_H1, TRUE);
-        }
+			MovePiece(Board, BB_F1, BB_H1, FALSE);
         else
-        {
-            piece = RemovePiece(Board, BB_F8, TRUE);
-            PutPiece(Board, piece, BB_H8, TRUE);
-        }
+			MovePiece(Board, BB_F8, BB_H8, FALSE);
     }
     else if (move_to_unmake->moveflag & MOVE_OOO)
     {
-        int piece;
-
         if (COLOROF(Board->squares[from]) == XWHITE)
-        {
-            piece = RemovePiece(Board, BB_D1, TRUE);
-            PutPiece(Board, piece, BB_A1, TRUE);
-        }
+			MovePiece(Board, BB_D1, BB_A1, FALSE);
         else
-        {
-            piece = RemovePiece(Board, BB_D8, TRUE);
-            PutPiece(Board, piece, BB_A8, TRUE);
-        }
+			MovePiece(Board, BB_D8, BB_A8, FALSE);
     }
 
     Board->sidetomove = OPPONENT(Board->sidetomove);

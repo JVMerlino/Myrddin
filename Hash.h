@@ -33,13 +33,6 @@ typedef union HASH_ENTRY {
 	long long  l[2];
 } HASH_ENTRY;
 
-typedef struct PAWN_HASH_ENTRY
-{
-    PosSignature	dwSignature;
-    short			mgEval;
-    short           egEval;
-} PAWN_HASH_ENTRY;
-
 typedef struct EVAL_HASH_ENTRY
 {
     PosSignature	dwSignature;
@@ -48,7 +41,6 @@ typedef struct EVAL_HASH_ENTRY
 #pragma pack(pop)
 
 #define DEFAULT_HASH_SIZE		(0x800000)	// 128MB
-#define DEFAULT_PAWN_HASH_SIZE	(0x100000)	// 8MB
 
 #define HASH_NOT_EVAL		(0x00)
 #define HASH_ALPHA			(0x10)
@@ -65,11 +57,7 @@ void		CloseHash(void);
 void		SaveHash(CHESSMOVE *cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, PosSignature dwSignature);
 HASH_ENTRY *ProbeHash(PosSignature dwSignature);
 
-void	SavePawnHash(int mgEval, int egEval, PosSignature dwSignature);
-extern PAWN_HASH_ENTRY *	ProbePawnHash(PosSignature dwSignature);
-
 extern void SaveEvalHash(int nEval, PosSignature dwSignature);
 extern EVAL_HASH_ENTRY *	ProbeEvalHash(PosSignature dwSignature);
 
 PosSignature	GetBBSignature(BB_BOARD *bbBoard);
-PosSignature	GetBBPawnSignature(BB_BOARD *bbBoard);

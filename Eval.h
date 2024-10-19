@@ -16,10 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
-extern int	nPieceVals[NPIECES];
-extern int  PST[14][64];
+extern const int	nPieceVals[NPIECES];
 
-BOOL IsPassedPawn(BB_BOARD *EvalBoard, int sq, int color);
 int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta);
-int FastEvaluate(BB_BOARD* EvalBoard);
-double EPDTune(char* filename, double K);

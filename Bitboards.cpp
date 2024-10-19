@@ -21,6 +21,9 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Myrddin.h"
 #include "Bitboards.h"
 #include "Eval.h"
+#include "cerebrum.h"
+
+extern NN_Accumulator accumulator;
 
 BOOL		bPopcnt = FALSE;
 
@@ -28,7 +31,6 @@ Bitboard	bbPawnMoves[2][64];
 Bitboard	bbPawnAttacks[2][64];
 Bitboard	bbKnightMoves[64];
 Bitboard	bbKingMoves[64];
-Bitboard	bbPassedPawnMask[2][64];
 Bitboard	bbDiagonalMoves[64];
 Bitboard	bbStraightMoves[64];
 Bitboard	Bit[64];
@@ -45,6 +47,7 @@ Bitboard FileMask[8] =
     BB_FILE_A, BB_FILE_B, BB_FILE_C, BB_FILE_D, BB_FILE_E, BB_FILE_F, BB_FILE_G, BB_FILE_H
 };
 
+#if 0
 int VFlipSquare[64] = {
 	BB_A1, BB_B1, BB_C1, BB_D1, BB_E1, BB_F1, BB_G1, BB_H1,
 	BB_A2, BB_B2, BB_C2, BB_D2, BB_E2, BB_F2, BB_G2, BB_H2,
@@ -55,10 +58,11 @@ int VFlipSquare[64] = {
 	BB_A7, BB_B7, BB_C7, BB_D7, BB_E7, BB_F7, BB_G7, BB_H7,
 	BB_A8, BB_B8, BB_C8, BB_D8, BB_E8, BB_F8, BB_G8, BB_H8,
 };
+#endif
 
 BB_BOARD	bbBoard;
 
-int RemovePiece(BB_BOARD* Board, int square, BOOL bUpdatePST)
+int RemovePiece(BB_BOARD* Board, int square, BOOL bUpdateNN)
 {
 	IS_SQ_OK(square);
 	assert(Board->squares[square]);
@@ -72,27 +76,15 @@ int RemovePiece(BB_BOARD* Board, int square, BOOL bUpdatePST)
 	ClearBit(&Board->bbMaterial[color], square);
 	ClearBit(&Board->bbOccupancy, square);
 
-#if USE_INCREMENTAL_PST
-	if (bUpdatePST)
-	{
-		if (color == WHITE)
-		{
-			Board->mgPST -= PST[pstpiece][square];
-			Board->egPST -= PST[pstpiece + 6][square];
-		}
-		else
-		{
-			square = VFlipSquare[square];
-			Board->mgPST += PST[pstpiece][square];
-			Board->egPST += PST[pstpiece + 6][square];
-		}
-	}
+#if USE_INCREMENTAL_ACC_UPDATE
+	if (bUpdateNN)
+		nn_del_piece(accumulator, pstpiece, color, square ^ 56);
 #endif
 
 	return(piece);
 }
 
-void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdatePST)
+void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN)
 {
     IS_SQ_OK(square);
 	assert(Board->squares[square] == EMPTY);
@@ -105,21 +97,34 @@ void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdatePST)
     SetBit(&Board->bbMaterial[color], square);
     SetBit(&Board->bbOccupancy, square);
 
-#if USE_INCREMENTAL_PST
-	if (bUpdatePST)
-	{
-		if (color == WHITE)
-		{
-			Board->mgPST += PST[pstpiece][square];
-			Board->egPST += PST[pstpiece + 6][square];
-		}
-		else
-		{
-			square = VFlipSquare[square];
-			Board->mgPST -= PST[pstpiece][square];
-			Board->egPST -= PST[pstpiece + 6][square];
-		}
-	}
+#if USE_INCREMENTAL_ACC_UPDATE
+	if (bUpdateNN)
+		nn_add_piece(accumulator, pstpiece, color, square ^ 56);
+#endif
+}
+
+void MovePiece(BB_BOARD* Board, int from, int to, BOOL bUpdateNN)
+{
+	IS_SQ_OK(from);
+	IS_SQ_OK(to);
+
+	int	piece = Board->squares[from];
+	int color = COLOROF(piece) == XWHITE ? WHITE : BLACK;
+	int pstpiece = PIECEOF(piece);
+
+	Board->squares[from] = EMPTY;
+	Board->squares[to] = piece;
+
+	ClearBit(&Board->bbPieces[pstpiece][color], from);
+	ClearBit(&Board->bbMaterial[color], from);
+	ClearBit(&Board->bbOccupancy, from);
+	SetBit(&Board->bbPieces[pstpiece][color], to);
+	SetBit(&Board->bbMaterial[color], to);
+	SetBit(&Board->bbOccupancy, to);
+
+#if USE_INCREMENTAL_ACC_UPDATE
+	if (bUpdateNN)
+		nn_mov_piece(accumulator, pstpiece, color, from ^ 56, to ^ 56);
 #endif
 }
 
@@ -136,7 +141,7 @@ void initbitboards(void)
     // check for 64-bit popcnt support
     int CPUInfo[4] = {-1};
     __cpuid(CPUInfo, 1);
-    bPopcnt = (CPUInfo[2] & 0x800000);
+    bPopcnt = CPUInfo[2] & 0x800000;
 #endif
 
     // takes care of all queen, rook and bishop moves -- thanks, Pradu!
@@ -344,42 +349,6 @@ void initbitboards(void)
         }
     }
 
-    // passed pawn mask -- all squares in which an enemy pawn must exist for a pawn on a particular square to NOT be passed
-    // white passers
-    // first, fill the mask with all squares from the pawn's file, and any adjacent files
-    // then mask out all squares in the pawn's rank and all squares in all ranks behind the pawn
-    for (sq = 0; sq <= 63; sq++)
-    {
-        int rank;
-
-        bbPassedPawnMask[WHITE][sq] = 0;
-
-        if (File(sq) != FILE_A)
-            bbPassedPawnMask[WHITE][sq] |= FileMask[File(sq) - 1];
-        bbPassedPawnMask[WHITE][sq] |= FileMask[File(sq)];
-        if (File(sq) != FILE_H)
-            bbPassedPawnMask[WHITE][sq] |= FileMask[File(sq) + 1];
-
-        for (rank = Rank(sq); rank <= RANK_1; rank++)
-            bbPassedPawnMask[WHITE][sq] &= ~RankMask[rank];
-    }
-    // black passers
-    for (sq = 0; sq <= 63; sq++)
-    {
-        int rank;
-
-        bbPassedPawnMask[BLACK][sq] = 0;
-
-        if (File(sq) != FILE_A)
-            bbPassedPawnMask[BLACK][sq] |= FileMask[File(sq) - 1];
-        bbPassedPawnMask[BLACK][sq] |= FileMask[File(sq)];
-        if (File(sq) != FILE_H)
-            bbPassedPawnMask[BLACK][sq] |= FileMask[File(sq) + 1];
-
-        for (rank = Rank(sq); rank >= RANK_8; rank--)
-            bbPassedPawnMask[BLACK][sq] &= ~RankMask[rank];
-    }
-
     // straight attacks
     for (sq = 0; sq <= 63; sq++)
         bbStraightMoves[sq] = (RankMask[Rank(sq)] | FileMask[File(sq)]) & ~Bit[sq];
@@ -388,10 +357,11 @@ void initbitboards(void)
     for (sq = 0; sq <= 63; sq++)
         bbDiagonalMoves[sq] = Bmagic(sq, 0);
 
+#if 0
 	// bits between squares on a rank - used for determining FRC castling legality
-	for (x = 0; x <= 7; x++)
+	for (x = 0; x <= 6; x++)
 	{
-		for (y = 0; y <= 7; y++)
+		for (y = x+1; y <= 7; y++)
 		{
 			if (abs(x - y) <= 1)
 			{
@@ -413,6 +383,7 @@ void initbitboards(void)
 			}
 		}
 	}
+#endif
 
 	// masks for checking castling squares
 	wkc = Bit[BB_F1] | Bit[BB_G1];

@@ -36,29 +36,31 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define FALSE	0
 #define TRUE	1
 
+#define clamp(x, upper, lower) (min(upper, max(x, lower)))
+
 #define USE_HASH			TRUE
 #if USE_HASH
-#define USE_PAWN_HASH		TRUE
 #define USE_EVAL_HASH		TRUE
 #endif
 
 #define USE_ASPIRATION		TRUE
+#define MAX_ASPIRATION_SEARCHES	3
+#define ASPIRATION_WINDOW	16
 
-#define USE_IID				TRUE	
-#define USE_IIR             FALSE	
+#define USE_IID				TRUE
+#define USE_IIR             FALSE
 
 #define USE_HISTORY			TRUE
 #define USE_KILLERS			TRUE
+#define MAX_KILLERS			2
 
 #define USE_NULL_MOVE		TRUE
-#define USE_NULL_MOVE_VERIFICATION	FALSE
 
 #define USE_AGGRESSIVE_LMR	TRUE
-#define USE_LMP				FALSE
-#define USE_PRUNING			TRUE    // aka razoring
+#define USE_FUTILITY_PRUNING	TRUE
 #define USE_MATE_DISTANCE_PRUNING   TRUE
 
-#define USE_SEE				TRUE    // maybe worse?
+#define USE_SEE				TRUE	// maybe worse?
 #define USE_SEE_MOVE_ORDER	FALSE	// not helpful
 
 #define USE_SMP				TRUE
@@ -66,25 +68,17 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define DEBUG_SMP			FALSE	// adds lots of logging!
 #endif
 
+#define USE_INCREMENTAL_ACC_UPDATE	FALSE
+
 #define USE_EGTB			TRUE
 
-#define USE_INCREMENTAL_PST	FALSE
-
-#define USE_MATERIAL_IMBALANCE FALSE
-
+#define TIME_BANK			500	// milliseconds clock to keep as a buffer
 #ifdef _DEBUG
-#define VERIFY_BOARD		FALSE
+#define VERIFY_BOARD		TRUE
 #define assert(x)                // uncomment this if profiling!
 #else
 #define VERIFY_BOARD        FALSE
 #endif
-
-#define USE_FAST_EVAL       FALSE
-
-// tuning sets - one of these needs to be set to TRUE
-#define USE_GRANT_SET		FALSE	// one pass through the file takes 45 seconds - a full PST tuning pass takes 2-3 days
-#define USE_LICHESS_SET		TRUE	// one pass takes 11 seconds - a full pass takes 9-12 hours
-#define USE_QUIET_SET		FALSE	// one pass takes 4 seconds - a full pass takes 3-4 hours - NOT RECOMMENDED AS THIS IS NOT ENOUGH DATA
 
 #define SHOW_QS_NODES       FALSE
 
@@ -93,19 +87,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define min(a,b) ((a) > (b) ? (b) : (a))
 #endif
 
-#define KING_AND_MINOR_DRAW TRUE	// change this to false if testing studies in which the side with only a minor can mate
-
-#define MAX_DEPTH			(128)
-#define MAX_KILLERS			(2)
+#define MAX_DEPTH			128
 
 #define INFINITY			0x8000
 #define CHECKMATE			0x7FFF
 #define NO_EVAL				0xDEAD
 #define MATE_THREAT			0x4000
-
-#define MAX_ASPIRATION_SEARCHES	3	// should ideally be an odd number, don't ask why
-
-#define ASPIRATION_WINDOW	16
 
 #define NCOLORS	2
 #define NPIECES	6
@@ -113,8 +100,6 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define CLOCK_TO_USE		40		// divide remaining clock by this number to get base thinking time
 #define PANIC_CLOCK_TO_USE	40		// divide remaining clock by this number when we have less than PANIC_THRESHHOLD time remaining
 #define PANIC_THRESHHOLD	10000	// ten seconds left!
-
-#define NUM_RESIGN_MOVES	4		// number of moves above resign threshold before resigning
 
 ////////////////////////////////////////////////////////////////////////////////
 typedef unsigned char   ColorType;
@@ -187,9 +172,6 @@ typedef unsigned long long	PosSignature;
 typedef struct UNDOMOVE
 {
     PosSignature	dwSignature;
-#if USE_PAWN_HASH
-    PosSignature	dwPawnSignature;
-#endif
     BYTE			castle_status;
     SquareType		en_passant_pawn;
     BYTE			in_check_status;
@@ -246,7 +228,6 @@ typedef struct SHARED_HASH
 {
     PVOID HashTable;
     PVOID EvalHashTable;
-    PVOID PawnHashTable;
 } SHARED_HASH, *PSHARED_HASH;
 
 extern int			nCPUs;
@@ -278,7 +259,7 @@ extern int		nEGTBCompressionType;
 extern char     szEGTBPath[MAX_PATH];
 
 extern PosSignature	dwInitialPosSignature;
-extern BOOL			bLog, bEval, bExactThinkTime, bExactThinkDepth, bTuning;
+extern BOOL			bLog, bExactThinkTime, bExactThinkDepth;
 extern int			nEngineMode, nEngineCommand;
 extern unsigned int	nGameMove, nFifty;
 extern int			nCompSide;
@@ -289,12 +270,12 @@ extern clock_t      nThinkStart;
 extern int			nClockRemaining;
 extern unsigned int nCheckNodes;	// number of nodes to search before checking time management
 extern int          LMRReductions[32][32];
-extern CHESSMOVE	cmBestMove, cmPonderMove;
+extern CHESSMOVE	cmChosenMove, cmPonderMove;
 extern FILE		   *logfile;
 
 BOOL	CheckForInput(BOOL bWaitForInput);
 void 	HandleCommand(void);
 
-void	PrintPV(int nPVEval, int nSideToMove, char *comment, BOOL bPrintKibitz);
+void	PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz);
 char   *MoveToString(char *moveString, CHESSMOVE *move, BOOL bAddMove);
 char   *PVMoveToString(char* moveString, PVMOVE* move, BOOL bAddMove);

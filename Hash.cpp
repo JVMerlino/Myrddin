@@ -30,11 +30,9 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define HASH_AGING_FACTOR	4	// min number of plies difference between stored and incoming entry, including hash age
 
 HASH_ENTRY		*HashTable = NULL;
-PAWN_HASH_ENTRY *PawnHashTable = NULL;
 EVAL_HASH_ENTRY *EvalHashTable = NULL;
 
 size_t	dwHashSize = DEFAULT_HASH_SIZE; // results in 128MB of hash
-size_t	dwPawnHashSize = 0x100000;		// results in 16MB of pawn hash
 size_t	dwEvalHashSize = 0x200000;		// results in 32MB of eval hash
 
 // short	nHashAge = 0;
@@ -141,7 +139,7 @@ void SaveHash(CHESSMOVE *cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, P
 #endif	// ALWAYS_REPLACE
 
 Replace:
-    if (abs(nEval) >= (CHECKMATE / 2))
+    if (abs(nEval) >= MATE_THREAT)
     {
         if (nEval > 0)
             nEval += nPly;
@@ -176,75 +174,6 @@ Replace:
 #endif
 }
 
-#if USE_PAWN_HASH
-/*========================================================================
-** ProbePawnHash - probes the pawn hash table for a matching entry
-**========================================================================
-*/
-PAWN_HASH_ENTRY	*ProbePawnHash(PosSignature dwSignature)
-{
-    if (PawnHashTable == NULL)
-        return(NULL);
-
-    PosSignature	index = dwSignature & (dwPawnHashSize - 1);
-    PAWN_HASH_ENTRY *pEntry = PawnHashTable + index;
-
-#if 0 // LOG_HASH
-    if (bLog)
-        nHashProbes++;
-#endif
-
-    if (pEntry->dwSignature == dwSignature)
-    {
-        // verify that the position is identical
-#if 0 // LOG_HASH
-        if (bLog)
-            nHashHits++;
-#endif
-        return(pEntry);
-    }
-    else
-        return(NULL);
-}
-
-/*========================================================================
-** SavePawnHash - saves a pawn structure and corresponding evaluation in
-** the pawn hash table if applicable
-**========================================================================
-*/
-void SavePawnHash(int mgEval, int egEval, PosSignature dwSignature)
-{
-    if (PawnHashTable == NULL)
-        return;
-
-#if 0 // LOG_HASH
-    if (bLog)
-        nHashSaves++;
-#endif
-
-    PosSignature	index = dwSignature & (dwPawnHashSize - 1);
-    PAWN_HASH_ENTRY *pEntry = PawnHashTable + index;
-
-    if (dwSignature == pEntry->dwSignature)
-    {
-#if 0 // LOG_HASH
-        if (bLog)
-            nHashBails++;
-#endif
-        return;
-    }
-
-#if USE_INTERLOCKED
-    _InterlockedExchange64((volatile LONG64 *)&pEntry->nEval,  (long long)nEval);
-    _InterlockedExchange64((volatile LONG64 *)&pEntry->dwSignature , dwSignature);
-#else
-	pEntry->mgEval = (short)mgEval;
-    pEntry->egEval = (short)egEval;
-    pEntry->dwSignature = dwSignature;
-#endif
-}
-#endif	// USE_PAWN_HASH
-
 #if USE_EVAL_HASH
 /*========================================================================
 ** ProbeEvalHash - probes the eval hash table for a matching entry
@@ -274,7 +203,7 @@ EVAL_HASH_ENTRY *	ProbeEvalHash(PosSignature dwSignature)
 }
 
 /*========================================================================
-** SavePawnHash - saves a position evaluation in the eval hash table
+** SaveEvalHash - saves a position evaluation in the eval hash table
 **========================================================================
 */
 void SaveEvalHash(int nEval, PosSignature dwSignature)
@@ -326,11 +255,6 @@ void ClearHash(void)
     if (EvalHashTable)
         memset(EvalHashTable, 0, sizeof(EVAL_HASH_ENTRY) * dwEvalHashSize);
 #endif
-
-#if USE_PAWN_HASH
-    if (PawnHashTable)
-        memset(PawnHashTable, 0, sizeof(PAWN_HASH_ENTRY) * dwPawnHashSize);
-#endif
 }
 
 /*========================================================================
@@ -361,14 +285,6 @@ HASH_ENTRY* InitHash(void)
         EvalHashTable = (EVAL_HASH_ENTRY *)malloc(dwEvalHashSize * sizeof(EVAL_HASH_ENTRY));
 #endif
 
-#if USE_PAWN_HASH
-        if (bLog)
-            fprintf(logfile, "allocating pawn hash table of %ld (%dMB) size, each entry is %d bytes\n", dwPawnHashSize * sizeof(PAWN_HASH_ENTRY),
-                    (dwPawnHashSize * sizeof(PAWN_HASH_ENTRY)) >> 20, sizeof(PAWN_HASH_ENTRY));
-
-        PawnHashTable = (PAWN_HASH_ENTRY *)malloc(dwPawnHashSize * sizeof(PAWN_HASH_ENTRY));
-#endif
-
         if (HashTable)
             ClearHash();
 #endif	// !USE_SMP
@@ -387,7 +303,7 @@ HASH_ENTRY* InitHash(void)
     {
 		// create shared memory for slave processes (even if they're aren't any, because of the "cores" command)
 		hilo h={0};
-   		h.b = dwHashSize * sizeof (HASH_ENTRY) + dwPawnHashSize * sizeof (PAWN_HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY);
+   		h.b = dwHashSize * sizeof (HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY);
 
 		sprintf(szSharedHashName, "MSH-%lld-%d", (long long)tb.time, tb.millitm);
 		sprintf(szSharedMemName, "MSM-%lld-%d", (long long)tb.time, tb.millitm);
@@ -407,10 +323,9 @@ HASH_ENTRY* InitHash(void)
 													0,
 													0);
 
-			PawnHashTable = (PAWN_HASH_ENTRY *) ((char *) HashTable + dwHashSize * sizeof (HASH_ENTRY));
-			EvalHashTable = (EVAL_HASH_ENTRY *) ((char *) PawnHashTable +  dwPawnHashSize * sizeof (PAWN_HASH_ENTRY));
+			EvalHashTable = (EVAL_HASH_ENTRY *) ((char *) HashTable + dwHashSize * sizeof (HASH_ENTRY));
 #if DEBUG_SMP
-			printf("Master says hash = %08X, pawn = %08X, eval = %08X\n", &HashTable, &PawnHashTable, &EvalHashTable);
+			printf("Master says hash = %08X, eval = %08X\n", &HashTable, &EvalHashTable);
 #endif
 			if (HashTable)
 				ClearHash();
@@ -451,17 +366,16 @@ HASH_ENTRY* InitHash(void)
                                                     FILE_MAP_ALL_ACCESS,  // read/write permission
                                                     0,
                                                     0,
-                                                    dwHashSize * sizeof (HASH_ENTRY) + dwPawnHashSize * sizeof (PAWN_HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY));
+                                                    dwHashSize * sizeof (HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY));
 
-            PawnHashTable = (PAWN_HASH_ENTRY *) ((char *) HashTable + dwHashSize * sizeof (HASH_ENTRY));
-            EvalHashTable = (EVAL_HASH_ENTRY *) ((char *) PawnHashTable +  dwPawnHashSize * sizeof (PAWN_HASH_ENTRY));
+            EvalHashTable = (EVAL_HASH_ENTRY *) ((char *) HashTable + dwHashSize * sizeof (HASH_ENTRY));
 
 #if DEBUG_SMP
             if (HashTable == NULL)
                 printf("Could not map view of file (%s).\n", szSharedHashName);
             else
 			{
-                printf("Slave says hash = %08X, shared eval = %08X, shared pawn = %08X\n", &HashTable, &EvalHashTable, &PawnHashTable);
+                printf("Slave says hash = %08X, shared eval = %08X\n", &HashTable, &EvalHashTable);
 				printf("Slave says it is number %d\n", nSlaveNum);
 			}
 #endif
@@ -522,9 +436,6 @@ void CloseHash(void)
         CloseHandle(hSharedHash);
 #else
     free(HashTable);
-#if USE_PAWN_HASH
-    free(PawnHashTable);
-#endif
 
 #if USE_EVAL_HASH
     free(EvalHashTable);
@@ -564,39 +475,6 @@ PosSignature GetBBSignature(BB_BOARD *bbBoard)
 		INDEX_CHECK(bbBoard->epSquare, aEPArray);
         sig ^= aEPArray[bbBoard->epSquare];
 	}
-
-    return(sig);
-}
-
-/*========================================================================
-** GetBBPawnSignature -- get the Zobrist hash signature of a pawn structure
-** and all other pieces related to the pawn hash (just Kings at this time)
-**========================================================================
-*/
-PosSignature GetBBPawnSignature(BB_BOARD *bbBoard)
-{
-    int				color, sq;
-    Bitboard		pieces;
-    PosSignature	sig = 0;
-
-    for (color = WHITE; color <= BLACK; color++)
-    {
-        pieces = bbBoard->bbPieces[PAWN][color];
-
-        while (pieces)
-        {
-            sq = BitScan(PopLSB(&pieces));
-            sig ^= aPArray[PAWN + (color * 6)][sq];
-        }
-
-        pieces = bbBoard->bbPieces[KING][color];
-
-        while (pieces)
-        {
-            sq = BitScan(PopLSB(&pieces));
-            sig ^= aPArray[KING + (color * 6)][sq];
-        }
-    }
 
     return(sig);
 }

@@ -33,6 +33,8 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define	MOVE_SEARCHED	0x1000	// move has been searched   -+||||||||||	// not in use (yet)
 								//                           snmrccpkqeppp
 
+#define MOVE_NOT_QUIET	0x01F0	// castle, promotion, check, or capture
+
 #define  FIRST_PROMOTE  (QUEEN)
 #define  LAST_PROMOTE   (KNIGHT)
 
@@ -40,18 +42,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define  HASH_SORT_VAL		0x500000
 #define  CAPTURE_SORT_VAL	0x200000
 
-#define  KILLER_1_SORT_VAL  0x200002	// this places killer moves after good captures, but before equal or losing captures
-#define  KILLER_2_SORT_VAL  0x200001
-#define  KILLER_3_SORT_VAL  0x200000
+#define  KILLER_1_SORT_VAL  0x200003	// this places killer moves after good captures, but before equal or losing captures
+#define  KILLER_2_SORT_VAL  0x200002
+#define  KILLER_3_SORT_VAL  0x200001
 #define  MATE_KILLER_BONUS  0x010000
 
 #define	 MAX_HISTORY_VAL	0x0FFFFF
-
-#define  TOTAL_PHASE		256	// uses 10 points for each knight/bishop, 22 points for each rook, 44 points for each queen - pawns don't count
-#define  PAWN_PHASE			0
-#define	 MINOR_PHASE		10
-#define  ROOK_PHASE         22
-#define  QUEEN_PHASE		44
 
 void			BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_move, BOOL CapturesOnly);
 int 			BBKingInDanger(BB_BOARD *Board, int whose_king);
@@ -60,6 +56,4 @@ void			BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board);
 void			BBMakeNullMove(CHESSMOVE *cmNull, BB_BOARD *Board);
 void			BBUnMakeNullMove(CHESSMOVE *cmNull, BB_BOARD *Board);
 Bitboard		GetAttackers(BB_BOARD *Board, int square, int color, BOOL bNeedOnlyOne);
-Bitboard		GetAllAttackers(BB_BOARD *Board, int square);
-
-extern int		nPiecePhaseVals[NPIECES];
+//Bitboard		GetAllAttackers(BB_BOARD *Board, int square);

@@ -101,17 +101,12 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board)
     char        temp_str[256];
     PieceType   temp_castle_status, piece;
     ColorType	color;
-#if USE_INCREMENTAL_PST
-	int			pst_square, mult;
-#endif
 
     strcpy(temp_str, forsythe_str);
 
     ZeroMemory(Board, sizeof(BB_BOARD));
 
     search = strtok(temp_str, " ");
-
-    Board->phase = 0;
 
     while (*search)
     {
@@ -148,72 +143,33 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board)
             Board->squares[square] = piece | ((color == WHITE) ? XWHITE : XBLACK);
 			IS_PIECE_OK(piece);
 
-#if USE_INCREMENTAL_PST
-			pst_square = square;
-			mult = 1;
-			if (color == BLACK)
-			{
-				pst_square = pst_square ^ 56;
-				mult = -1;
-			}
-#endif
-
             switch (piece)
             {
 				case KING:
 					SetBit(&Board->bbPieces[KING][color], square);
-#if USE_INCREMENTAL_PST
-					Board->mgPST += PST[KING][pst_square] * mult;
-					Board->egPST += PST[KING + 6][pst_square] * mult;
-#endif
 					break;
 				case QUEEN:
 					SetBit(&Board->bbPieces[QUEEN][color], square);
-#if USE_INCREMENTAL_PST
-					Board->mgPST += PST[QUEEN][pst_square] * mult;
-					Board->egPST += PST[QUEEN + 6][pst_square] * mult;
-#endif
 					break;
 				case ROOK:
 					SetBit(&Board->bbPieces[ROOK][color], square);
-#if USE_INCREMENTAL_PST
-					Board->mgPST += PST[ROOK][pst_square] * mult;
-					Board->egPST += PST[ROOK + 6][pst_square] * mult;
-#endif
 					break;
 				case BISHOP:
 					SetBit(&Board->bbPieces[BISHOP][color], square);
-#if USE_INCREMENTAL_PST
-					Board->mgPST += PST[BISHOP][pst_square] * mult;
-					Board->egPST += PST[BISHOP + 6][pst_square] * mult;
-#endif
 					break;
 				case KNIGHT:
 					SetBit(&Board->bbPieces[KNIGHT][color], square);
-#if USE_INCREMENTAL_PST
-					Board->mgPST += PST[KNIGHT][pst_square] * mult;
-					Board->egPST += PST[KNIGHT + 6][pst_square] * mult;
-#endif
 					break;
 				case PAWN:
 					SetBit(&Board->bbPieces[PAWN][color], square);
-#if USE_INCREMENTAL_PST
-					Board->mgPST += PST[PAWN][pst_square] * mult;
-					Board->egPST += PST[PAWN + 6][pst_square] * mult;
-#endif
 					break;
             }
-
-            if ((piece != KING) && (piece != PAWN))
-                Board->phase += nPiecePhaseVals[piece];
 
             ++col;
         }
 
         ++search;
     }
-
-//	printf("mg = %d, eg = %d\n", Board->mgPST, Board->egPST);
 
     Board->bbMaterial[WHITE] = Board->bbPieces[KING][WHITE] | Board->bbPieces[QUEEN][WHITE] | Board->bbPieces[ROOK][WHITE] |
                                Board->bbPieces[BISHOP][WHITE] | Board->bbPieces[KNIGHT][WHITE] | Board->bbPieces[PAWN][WHITE];
