@@ -1697,7 +1697,7 @@ void PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz)
 {
     int			n;
     char		moveString[24];
-	char		buf[512]={0};
+	char		buf[1024]={0};
 	unsigned long long	nNodes = nSearchNodes;
 
     if ((nEngineMode == ENGINE_ANALYZING) && (nSideToMove == BLACK))
