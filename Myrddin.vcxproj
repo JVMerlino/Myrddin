@@ -224,6 +224,8 @@
       <AdditionalIncludeDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\sysport;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\huffman;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\liblzf;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\lzma;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.3.2\compression\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
       <FavorSizeOrSpeed>Neither</FavorSizeOrSpeed>
+      <CallingConvention>StdCall</CallingConvention>
+      <CompileAs>CompileAsCpp</CompileAs>
     </ClCompile>
     <Link>
       <AdditionalOptions>/fixed:no %(AdditionalOptions)</AdditionalOptions>
@@ -342,7 +344,7 @@
       <PreprocessorDefinitions>WIN64;_WIN64;NDEBUG;_CONSOLE;Z_PREFIX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <CompileAs>Default</CompileAs>
+      <CompileAs>CompileAsCpp</CompileAs>
       <AdditionalIncludeDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
@@ -351,7 +353,11 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <BasicRuntimeChecks>Default</BasicRuntimeChecks>
+      <StructMemberAlignment>Default</StructMemberAlignment>
+      <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
@@ -416,6 +422,9 @@
     </ClCompile>
     <ClCompile Include="book.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="cerebrum.c">
+      <CallingConvention Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'">Cdecl</CallingConvention>
     </ClCompile>
     <ClCompile Include="FEN.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
