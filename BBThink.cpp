@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -24,7 +24,10 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Think.h"
 #include "FEN.h"
 #include "Hash.h"
+
+#if USE_EGTB
 #include "TBProbe.h"
+#endif
 
 #define FULL_LOG		FALSE
 #define LOG_SEE			FALSE
@@ -50,7 +53,7 @@ BB_BOARD	bbEvalBoard;
 
 CHESSMOVE	cmEvalGameMoveList[MAX_MOVE_LIST];
 
-// total time on dev machine with bulk counting = 45.8s
+// total time on dev machine with bulk counting = 49.3s (45.7 if not using incremental accumulator update)
 PERFT_TEST	perft_tests[NUM_PERFT_TESTS] =
 {
 "r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1", 6, 485647607,
@@ -117,7 +120,7 @@ unsigned long long	doBBPerft(int depth, BB_BOARD* Board, BOOL bDivide)
 		memcpy(&BoardTemp, Board, sizeof(BB_BOARD));
 #endif
 
-		BBMakeMove(&cmPerftMoveList[nMove], Board);
+		BBMakeMove(&cmPerftMoveList[nMove], Board, FALSE);
 
 		tempnodes = doBBPerft(depth - 1, Board, FALSE);
 
@@ -125,7 +128,7 @@ unsigned long long	doBBPerft(int depth, BB_BOARD* Board, BOOL bDivide)
 			printf("= %I64u nodes\n", tempnodes);
 		nodes += tempnodes;
 
-		BBUnMakeMove(&cmPerftMoveList[nMove], Board);
+		BBUnMakeMove(&cmPerftMoveList[nMove], Board, FALSE);
 
 #if VERIFY_BOARD
 		assert(memcmp(&BoardTemp, Board, sizeof(BB_BOARD)) == 0);
@@ -175,11 +178,11 @@ BOOL CheckTimeRemaining(void)
 	if ((nEngineMode == ENGINE_ANALYZING) || (nEngineMode == ENGINE_PONDERING))
 		return(TRUE);
 
-	nTimeUsed = GetTickCount() - nThinkStart - nPonderTime;
+	nTimeUsed = GetTickCount64() - nThinkStart - nPonderTime;
 
 	if (bExactThinkTime)
 	{
-		if ((GetTickCount() - nThinkStart) >= nThinkTime * 1000)
+		if ((GetTickCount64() - nThinkStart) >= nThinkTime * 1000)
 			return(FALSE);
 		else
 			return(TRUE);
@@ -194,7 +197,7 @@ BOOL CheckTimeRemaining(void)
 	if (bKeepThinking || bThinkUntilSafe)
 		return(TRUE);
 
-	bTimeRemaining = (nTimeUsed < (int)nThinkTime);
+	bTimeRemaining = (nTimeUsed < nThinkTime);
 
 	if (bTimeRemaining)
 		return(TRUE);
@@ -317,7 +320,7 @@ void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves)
 
 #if USE_SEE_MOVE_ORDER
 		if (cmMove.moveflag & MOVE_CAPTURE)
-			cmMove.nScore += BBSEEMove(&cmMove, nEvalSideToMove);
+			cmMove.nScore += BBSEEMove(&cmMove, nSideToMove);
 #endif
 
 #if USE_KILLERS
@@ -574,7 +577,7 @@ int BBSEEMove(CHESSMOVE* cmMove, int ctSide)
 		return(0);
 
 	// make the move
-	BBMakeMove(cmMove, &bbEvalBoard);
+	BBMakeMove(cmMove, &bbEvalBoard, FALSE);
 
 	// Handle promotions???!!!
 
@@ -587,7 +590,7 @@ int BBSEEMove(CHESSMOVE* cmMove, int ctSide)
 #endif
 
 	// unmake the move
-	BBUnMakeMove(cmMove, &bbEvalBoard);
+	BBUnMakeMove(cmMove, &bbEvalBoard, FALSE);
 
 	return(val);
 }
@@ -658,7 +661,7 @@ int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 
 	nStandPat = BBEvaluate(&bbEvalBoard, nAlpha, nBeta);
 
-	if (nEvalPly == MAX_DEPTH)
+	if (nEvalPly >= MAX_DEPTH)
 	{
 		pvLine->pvLength = 0;
 		return(nStandPat);
@@ -752,7 +755,7 @@ int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 #endif
 		}
 
-		BBMakeMove(&cmMove, &bbEvalBoard);
+		BBMakeMove(&cmMove, &bbEvalBoard, TRUE);
 		cmMove.dwSignature = bbEvalBoard.signature;	// bbEvalBoard.signature;
 		cmEvalGameMoveList[nEvalMove++] = cmMove;
 		nEvalPly++;
@@ -764,7 +767,7 @@ int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 		nEval = -BBQuiesce(-nBeta, -nAlpha, &pv);
 #endif
 
-		BBUnMakeMove(&cmMove, &bbEvalBoard);
+		BBUnMakeMove(&cmMove, &bbEvalBoard, TRUE);
 		nEvalMove--;
 		nEvalPly--;
 		nQuiesceDepth--;
@@ -879,13 +882,58 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 
 	BOOL bPVNode = (nBeta - nAlpha) > 1;
 
+#if USE_EGTB
+	// Probe Gaviota EGTBs
+	if (nEvalPly && tb_available && (BitCount(bbEvalBoard.bbOccupancy) <= 5))
+	{
+		nEval = GaviotaTBProbe(&bbEvalBoard, (nEvalPly >= 3) && (nDepth <= 2));
+
+		if (nEval != EXIT_FAILURE)
+		{
+			if (nEval > 0)
+				nEval -= nEvalPly;
+			else if (nEval < 0)
+				nEval += nEvalPly;
+
+			if (nEval <= nAlpha)
+				return(nAlpha);
+			else if (nEval >= nBeta)
+				return(nBeta);
+
+			return(nEval);
+		}
+	}
+#endif
+
+	// we've gone to the max search depth, so just evaluate
+	if (nEvalPly >= MAX_DEPTH)
+		return(BBEvaluate(&bbEvalBoard, nAlpha, nBeta));
+
+#if USE_MATE_DISTANCE_PRUNING
+	// mate distance pruning
+	int nMateValue = CHECKMATE - nEvalPly;
+	if (nMateValue < nBeta)
+	{
+		nBeta = nMateValue;
+		if (nAlpha >= nMateValue)
+			return(nAlpha);
+	}
+	nMateValue = -CHECKMATE + nEvalPly;
+	if (nMateValue > nAlpha)
+	{
+		nAlpha = nMateValue;
+		if (nBeta <= nMateValue)
+			return(nBeta);
+	}
+#endif
+
 #if USE_HASH
 	// probe the hash table
 	int			nHashFlags = 0;
 	BYTE		nHashType = HASH_ALPHA;
 	HASH_ENTRY* heHash = ProbeHash(bbSig);
 
-	if (heHash && /* !bPVNode && */ (nEngineMode == ENGINE_PONDERING ? nEvalPly >= 3 : nEvalPly >= 2))
+	if (heHash && !bPVNode && (nEngineMode == ENGINE_PONDERING ? nEvalPly >= 3 : nEvalPly >= 2))
 	{
 #if FULL_LOG
 		if (nEvalPly == 0)
@@ -959,51 +1007,6 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 #if USE_SMP
 	if (bSlave)
 		smSharedMem->sdSlaveData[nSlaveNum].nSearchNodes++;	// only increment search nodes for slaves if there wasn't a hash cutoff
-#endif
-
-#if USE_EGTB
-	// Probe Gaviota EGTBs
-	if (nEvalPly && tb_available && (BitCount(bbEvalBoard.bbOccupancy) <= 5))
-	{
-		nEval = GaviotaTBProbe(&bbEvalBoard, (nEvalPly >= 3) && (nDepth <= 2));
-
-		if (nEval != EXIT_FAILURE)
-		{
-			if (nEval > 0)
-				nEval -= nEvalPly;
-			else if (nEval < 0)
-				nEval += nEvalPly;
-
-			if (nEval <= nAlpha)
-				return(nAlpha);
-			else if (nEval >= nBeta)
-				return(nBeta);
-
-			return(nEval);
-		}
-	}
-#endif
-
-	// we've gone to the max search depth, so just evaluate
-	if (nEvalPly == MAX_DEPTH)
-		return(BBEvaluate(&bbEvalBoard, nAlpha, nBeta));
-
-#if USE_MATE_DISTANCE_PRUNING
-	// mate distance pruning
-	int nMateValue = CHECKMATE - nEvalPly;
-	if (nMateValue < nBeta)
-	{
-		nBeta = nMateValue;
-		if (nAlpha >= nMateValue)
-			return(nAlpha);
-	}
-	nMateValue = -CHECKMATE + nEvalPly;
-	if (nMateValue > nAlpha)
-	{
-		nAlpha = nMateValue;
-		if (nBeta <= nMateValue)
-			return(nBeta);
-	}
 #endif
 
 	// depth is 0, return quiescent search score
@@ -1191,6 +1194,10 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 		int nScore;
 
 		nScore = BBAlphaBeta(nDepth / 3, nAlpha, nBeta, &pvIID, FALSE);
+#if 1
+		if (nScore <= nAlpha)
+			nScore = BBAlphaBeta(nDepth / 3, -INFINITY, INFINITY, &pvIID, FALSE);
+#endif
 
 		if (nScore > nAlpha)
 		{
@@ -1217,7 +1224,7 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 
 #if USE_IIR
 	// Still didn't find a good move, so just reduce
-	if ((nEvalPly > 1) && !bFound && (nDepth >= 5))
+	if ((nEvalPly > 1) && !bFound && (nDepth >= 3))
 		nDepth--;
 #endif
 
@@ -1260,7 +1267,7 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 		cmMove = *GetNextMove(&cmEvalMoveList[0], nNumMoves);
 
 #if 0
-		if (bPruningAllowed && (nDepth < 3) && ((cmMove.moveflag & MOVE_NOT_QUIET) == 0) && (n > (2 + (nDepth * nDepth))))
+		if (bPruningAllowed && (nDepth < 3) && ((cmMove.moveflag & MOVE_NOT_QUIET) == 0x0) && (n > (2 + (nDepth * nDepth))))
 			continue;
 #endif
 
@@ -1286,7 +1293,7 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 			nSee = BBSEEMove(&cmMove, bbEvalBoard.sidetomove);
 #endif
 
-		BBMakeMove(&cmMove, &bbEvalBoard);
+		BBMakeMove(&cmMove, &bbEvalBoard, TRUE);
 		cmMove.dwSignature = bbEvalBoard.signature;	// bbEvalBoard.signature;
 
 		cmEvalGameMoveList[nEvalMove++] = cmMove;
@@ -1298,7 +1305,7 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 //      int tsquare = cmMove.tsquare;
 //      int tpiece = bbEvalBoard.squares[tsquare];
 
-		if ((n > 1)		            // not the first move in the list
+		if ((n > 0)		            // not the first move in the list
 //			&& !bPVNode				// not a PV node
 			&& (nEvalPly > 1)		// not at the root
 			&& !bInCheck			// not in check
@@ -1327,30 +1334,30 @@ int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNullMove)
 		if ((cmMove.moveflag & MOVE_CHECK) || (nNumMoves == 1))
 			nReductions--;
 
+		if (nReductions > nDepth)
+			nReductions = nDepth;
+
 		// PVS
 		if (n == 0)
 			nEval = -BBAlphaBeta(nDepth - 1 - nReductions, -nBeta, -nAlpha, &pv, FALSE);    // reduced full window for first move in list
 		else
 		{
 			nEval = -BBAlphaBeta(nDepth - 1 - nReductions, -nAlpha - 1, -nAlpha, &pv, FALSE); // reduced null window search for all other moves
-			if ((nEngineCommand != STOP_THINKING) && (nEngineCommand != END_THINKING)
-				&& (nEval > nAlpha) /* && (nEval < nBeta) */)
+			if ((nEval > nAlpha) && bPVNode && (nEngineCommand != STOP_THINKING) && (nEngineCommand != END_THINKING))
 			{
-				//				memset(&pv, 0, sizeof(PV));
+				//	memset(&pv, 0, sizeof(PV));
 				nEval = -BBAlphaBeta(nDepth - 1 - nReductions, -nBeta, -nAlpha, &pv, FALSE);   // reduced full window search if promising
 			}
 		}
 
+		// if we did a depth reduction but improved alpha, research at proper depth
 		if (nReductions > 0)
 		{
-			nReductions = 0;
-
-			// if we did a depth reduction but improved alpha, research at proper depth
 			if ((nEval > nAlpha) && ((nEngineCommand != STOP_THINKING) && (nEngineCommand != END_THINKING)))
 				nEval = -BBAlphaBeta(nDepth - 1, -nBeta, -nAlpha, &pv, FALSE);  // full-depth full window if still promising
 		}
 
-		BBUnMakeMove(&cmMove, &bbEvalBoard);
+		BBUnMakeMove(&cmMove, &bbEvalBoard, TRUE);
 		nEvalMove--;
 		nEvalPly--;
 
@@ -1493,7 +1500,7 @@ int	Think(int nDepth)
 		ClearKillers(FALSE);
 #endif
 #if USE_HISTORY
-		//		ClearHistory();
+		ClearHistory();
 #endif
 #if USE_HASH
 //      nHashAge++;
@@ -1503,12 +1510,12 @@ int	Think(int nDepth)
 	else
 	{
 #if USE_KILLERS
-		//      ClearKillers(TRUE);	// only reset the scores on later depths, but leave the killers for move ordering
+		ClearKillers(TRUE);	// only reset the scores on later depths, but leave the killers for move ordering
 #endif
 	}
 
 #if USE_ASPIRATION
-	if ((nDepth == 1) || ((BitCount(bbEvalBoard.bbOccupancy) <= 5) && tb_available))
+	if ((nDepth == 1) /* || ((BitCount(bbEvalBoard.bbOccupancy) <= 5) && tb_available) */)
 	{
 #if FULL_LOG
 		if (bLog)

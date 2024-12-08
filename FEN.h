@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define ISNUMBER(x) (x >= '0' && x <= '9')
 
 extern char	ePieceLabel[NPIECES];
-extern char *ForsytheSymbols;
+extern char ForsytheSymbols[];
 
 char *BBSquareName(SquareType square, char *buffer);
 

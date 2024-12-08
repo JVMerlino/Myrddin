@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -60,7 +60,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define USE_FUTILITY_PRUNING	TRUE
 #define USE_MATE_DISTANCE_PRUNING   TRUE
 
-#define USE_SEE				TRUE	// maybe worse?
+#define USE_SEE				TRUE	
 #define USE_SEE_MOVE_ORDER	FALSE	// not helpful
 
 #define USE_SMP				TRUE
@@ -68,7 +68,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define DEBUG_SMP			FALSE	// adds lots of logging!
 #endif
 
-#define USE_INCREMENTAL_ACC_UPDATE	FALSE
+#define USE_INCREMENTAL_ACC_UPDATE	TRUE
 
 #define USE_EGTB			TRUE
 
@@ -200,7 +200,7 @@ typedef struct PVMOVE
 typedef struct PV
 {
     long		pvLength;
-    PVMOVE		pv[MAX_DEPTH];
+    PVMOVE		pv[MAX_DEPTH+10];
 } PV;
 
 extern BOOL			bSlave;
@@ -249,7 +249,7 @@ typedef struct
 {
 	char	fen[120];
 	int		depth;
-	DWORD	value;
+	int		value;
 } PERFT_TEST;
 
 #define NUM_PERFT_TESTS	12
@@ -266,10 +266,9 @@ extern int			nCompSide;
 extern int			nThinkDepth;
 extern unsigned int	nFischerInc, nMovesBeforeControl;
 extern unsigned int nThinkTime, nPonderTime;
-extern clock_t      nThinkStart;
+extern ULONGLONG    nThinkStart;
 extern int			nClockRemaining;
 extern unsigned int nCheckNodes;	// number of nodes to search before checking time management
-extern int          LMRReductions[32][32];
 extern CHESSMOVE	cmChosenMove, cmPonderMove;
 extern FILE		   *logfile;
 

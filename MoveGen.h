@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -51,8 +51,8 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 void			BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_move, BOOL CapturesOnly);
 int 			BBKingInDanger(BB_BOARD *Board, int whose_king);
-void     		BBMakeMove(CHESSMOVE *move_to_make, BB_BOARD *Board);
-void			BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board);
+void     		BBMakeMove(CHESSMOVE *move_to_make, BB_BOARD *Board, BOOL bUpdateAcc);
+void			BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board, BOOL bUpdateAcc);
 void			BBMakeNullMove(CHESSMOVE *cmNull, BB_BOARD *Board);
 void			BBUnMakeNullMove(CHESSMOVE *cmNull, BB_BOARD *Board);
 Bitboard		GetAttackers(BB_BOARD *Board, int square, int color, BOOL bNeedOnlyOne);

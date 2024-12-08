@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -58,6 +58,6 @@ void		SaveHash(CHESSMOVE *cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, 
 HASH_ENTRY *ProbeHash(PosSignature dwSignature);
 
 extern void SaveEvalHash(int nEval, PosSignature dwSignature);
-extern EVAL_HASH_ENTRY *	ProbeEvalHash(PosSignature dwSignature);
+extern EVAL_HASH_ENTRY *ProbeEvalHash(PosSignature dwSignature);
 
 PosSignature	GetBBSignature(BB_BOARD *bbBoard);

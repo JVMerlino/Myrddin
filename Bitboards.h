@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -18,11 +18,24 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #ifdef _MSC_VER
 #pragma warning( disable : 4146)
+typedef unsigned __int64 Bitboard;
+#else
+typedef uint64_t Bitboard;
 #endif
 
-#include <intrin.h>
+#if defined(USE_SSE3) || defined(USE_SSE4)
+#include <immintrin.h>
 
-typedef unsigned __int64 Bitboard;
+#elif defined(__arm__) || defined(__aarch64__)
+#include <arm_neon.h>
+#elif defined(__linux__)
+#include <xmmintrin.h>
+#define _tzcnt_u64(x) __builtin_ctzll(x)
+#else
+#include <intrin.h>
+#endif
+
+#include "cerebrum.h"
 
 enum SQUARES {
     BB_A8 = 0, BB_B8, BB_C8, BB_D8, BB_E8, BB_F8, BB_G8, BB_H8,
@@ -184,16 +197,20 @@ __inline Bitboard GetMSB(Bitboard bb)
 #endif
 
 typedef struct BB_BOARD {
+	NN_Accumulator Accumulator;
+#if USE_INCREMENTAL_ACC_UPDATE
+//	NN_Accumulator SavedAcc;
+#endif
     Bitboard	bbPieces[6][2];
     Bitboard	bbMaterial[2];
     Bitboard	bbOccupancy;
     PosSignature	signature;
     int		squares[64];	// uses piece representation from 0x88 implementation (XWHITE or XBLACK)
 	int		epSquare;
-	BOOL	inCheck;
 	int 	castles;
 	int 	fifty;
 	int 	sidetomove;
+	BOOL	inCheck;
 } BB_BOARD;
 
 extern BB_BOARD	bbBoard;

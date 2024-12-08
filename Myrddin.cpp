@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -32,10 +32,12 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 // The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// added NNUE probing code by David Carteau (Orion / Cerebrum)
-// network created by me using games from CCRL, Lichess, and Myrddin testing (both self-play and against other engines)
-// fixed a rare bug that could cause the best move from the previous iteration to not be the first move searched
-// if perft or divide are called with no parameters, the default depth will be one (and Myrddin will no longer crash)
+// Now doing incremental updates to the NN accumulator during make/unmake move
+// Now compiling with clang (within MSVC IDE) - 45% speedup compared to MSVC compiler! Insane!!
+// Restored David Carteau's recommended eval multiplier - scores will be about 2x higher than before
+// Now clearing Killer move scores with every depth
+// Fixed potential instability/crash due to the move stack possibly becoming greater than MAX_DEPTH
+// Minor optimizations to PVS implementation and cutoff ordering
 //
 // TODO -- in no particular order
 
@@ -43,6 +45,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include <signal.h>
 #include <direct.h>
 #include <sys/timeb.h>
+#include <string.h>
 #include "myrddin.h"
 #include "Bitboards.h"
 #include "movegen.h"
@@ -51,13 +54,16 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include "fen.h"
 #include "book.h"
 #include "hash.h"
-#include "tbprobe.h"
-#include "gtb-probe.h"
 #include "magicmoves.h"
 #include "cerebrum.h"
 
-char	*szVersion = "Myrddin 0.91";
-char	*szInfo = "(10/20/24)";
+#if USE_EGTB
+#include "tbprobe.h"
+#include "gtb-probe.h"
+#endif
+
+char	szVersion[16] = "Myrddin 0.92";
+char	szInfo[16] = "(12/7/24)";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
@@ -66,9 +72,14 @@ BOOL 			bLog=FALSE;
 BOOL			bKibitz=FALSE;
 BOOL			bSlave=FALSE;
 int				nCPUs = 1;
+
+#if USE_EGTB
 int				nEGTBCompressionType=tb_CP4;
 char			szEGTBPath[MAX_PATH];
 BOOL			bNoTB = FALSE;
+#else
+BOOL			bNoTB = TRUE;
+#endif
 
 // other (evil) globals
 unsigned int	nGameMove;
@@ -79,7 +90,7 @@ int				nClockRemaining;	// needs to be signed because it can be temporarily nega
 unsigned int	nCheckNodes;
 CHESSMOVE		cmChosenMove, cmPonderMove;
 BB_BOARD		bbPonderRestore;
-clock_t			nThinkStart;
+ULONGLONG		nThinkStart;
 BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth;
 int				nEngineMode, nEngineCommand;
 PosSignature	dwInitialPosSignature;
@@ -88,8 +99,6 @@ char			line[512], command[512];
 int				is_pipe = 0;
 HANDLE			input_handle = 0;
 int				nSlaveNum = -1;
-
-extern NN_Accumulator accumulator;
 
 #if USE_SMP
 char			szProgName[MAX_PATH];
@@ -122,7 +131,7 @@ void SendSlavesString(char *szString)
 		return;
 
 	// strip trailing carriage return if there is one
-    c = strrchr(szString, '\n');
+    c = (char *)strrchr(szString, '\n');
     if (c)
         *c = '\0';
 
@@ -553,7 +562,7 @@ void bbNewGame(BB_BOARD *bbBoard)
     bbBoard->inCheck = FALSE;
     bbBoard->signature = GetBBSignature(bbBoard);
 
-	nn_update_all_pieces(accumulator, bbBoard->bbPieces);
+	nn_update_all_pieces(bbBoard->Accumulator, bbBoard->bbPieces);
 
     ZeroMemory(cmGameMoveList, sizeof(cmGameMoveList));
     nGameMove = 0;
@@ -738,7 +747,7 @@ void	HandleCommand(void)
         bbBoard.inCheck = BBKingInDanger(&bbBoard, bbBoard.sidetomove);
         dwInitialPosSignature = bbBoard.signature = GetBBSignature(&bbBoard);
 
-		nn_update_all_pieces(accumulator, bbBoard.bbPieces);
+		nn_update_all_pieces(bbBoard.Accumulator, bbBoard.bbPieces);
 
 #if 0
         WORD	x = 0;
@@ -804,7 +813,7 @@ void	HandleCommand(void)
 #endif
 
         int	depth = 0;
-        clock_t	starttime;
+        ULONGLONG	starttime;
 
         if (nEngineMode == ENGINE_THINKING || nEngineMode == ENGINE_ANALYZING || nEngineMode == ENGINE_PONDERING)
 		{
@@ -818,16 +827,16 @@ void	HandleCommand(void)
 		if (depth <= 0)
 			depth = 1;
 
-        starttime = GetTickCount();
+        starttime = GetTickCount64();
         nPerftMoves = doBBPerft(depth, &bbBoard, FALSE);
 #if USE_BULK_COUNTING
         printf("Using bulk counting... ");
 #endif
 
-        printf("perft %d = %I64u in %.2f seconds\n", depth, nPerftMoves, (float)((GetTickCount() - starttime)) / 1000);
+        printf("perft %d = %I64u in %.2f seconds\n", depth, nPerftMoves, (float)((GetTickCount64() - starttime)) / 1000);
 
 #if !USE_BULK_COUNTING
-        printf("%ld KNPS\n", nPerftMoves / (GetTickCount() - starttime));
+        printf("%ld KNPS\n", nPerftMoves / (GetTickCount64() - starttime));
 #endif
 
         PromptForInput();
@@ -842,7 +851,7 @@ void	HandleCommand(void)
 #endif
 
         int	depth;
-        clock_t	starttime;
+        ULONGLONG	starttime;
 
         if (nEngineMode == ENGINE_THINKING || nEngineMode == ENGINE_ANALYZING || nEngineMode == ENGINE_PONDERING)
 		{
@@ -859,9 +868,9 @@ void	HandleCommand(void)
 #if USE_BULK_COUNTING
 		printf("Using bulk counting...\n");
 #endif
-		starttime = GetTickCount();
+		starttime = GetTickCount64();
         nPerftMoves = doBBPerft(depth, &bbBoard, TRUE);
-        printf("perft %d = %I64u in time %.2f\n", depth, nPerftMoves, (float)((GetTickCount() - starttime)) / 1000);
+        printf("perft %d = %I64u in time %.2f\n", depth, nPerftMoves, (float)((GetTickCount64() - starttime)) / 1000);
 
         PromptForInput();
         return;
@@ -874,12 +883,12 @@ void	HandleCommand(void)
 			return;
 #endif
 		int x;
-		clock_t alltime, starttime;
+		ULONGLONG alltime, starttime;
 
 #if USE_BULK_COUNTING
 		printf("Using bulk counting...\n");
 #endif
-		alltime = GetTickCount();
+		alltime = GetTickCount64();
 		for (x = 0; x < NUM_PERFT_TESTS; x++)
 		{
 			bbNewGame(&bbBoard);
@@ -888,17 +897,17 @@ void	HandleCommand(void)
 			dwInitialPosSignature = bbBoard.signature = GetBBSignature(&bbBoard);
 
 			printf("%d) %s - ", x+1, perft_tests[x].fen);
-			starttime = GetTickCount();
+			starttime = GetTickCount64();
 			nPerftMoves = doBBPerft(perft_tests[x].depth, &bbBoard, FALSE);
 
-			printf("perft %d = %I64u in %.2f seconds - ", perft_tests[x].depth, nPerftMoves, (float)((GetTickCount() - starttime)) / 1000);
+			printf("perft %d = %I64u in %.2f seconds - ", perft_tests[x].depth, nPerftMoves, (float)((GetTickCount64() - starttime)) / 1000);
 			if (nPerftMoves != perft_tests[x].value)
-				printf("FAILED! Should be %I64u\n", perft_tests[x].value);
+				printf("FAILED! Should be %d\n", perft_tests[x].value);
 			else
 				printf("passed\n");
 		}
 
-		printf("Total Time = %.2f seconds\n", (float)((GetTickCount() - alltime)) / 1000);
+		printf("Total Time = %.2f seconds\n", (float)((GetTickCount64() - alltime)) / 1000);
 		PromptForInput();
 		return;
 	}
@@ -972,6 +981,7 @@ void	HandleCommand(void)
         return;
     }
 
+#if USE_EGTB
 	if (!strcmp(command, "tb"))
 	{
 #if USE_SMP
@@ -996,6 +1006,7 @@ void	HandleCommand(void)
 
 		return;
 	}
+#endif
 
 	if (!strcmp(command, "quit"))
     {
@@ -1039,7 +1050,7 @@ void	HandleCommand(void)
 		{
 #if USE_SMP
 			if (!bSlave)
-				SendSlavesString("quit");
+				SendSlavesString((char *)"quit");
 #endif
 #if USE_HASH
 	        CloseHash();
@@ -1095,7 +1106,7 @@ void	HandleCommand(void)
     {
 #if USE_SMP
 		if (!bSlave)
-			SendSlavesString("stop");
+			SendSlavesString((char *)"stop");
 #endif
 
         if (nEngineMode == ENGINE_ANALYZING)
@@ -1286,7 +1297,7 @@ void	HandleCommand(void)
 #endif
         int	nTime, nDivisor;
 
-        // GetTickCount() returns 1000's of a second, but Winboard uses 100's of a second
+        // GetTickCount64() returns 1000's of a second, but Winboard uses 100's of a second
         // so multiply what Winboard reports by 10 to match that scale. Then divide
         // by 30 so that, by default, the engine thinks for no more than 1/30 of the
         // available time.
@@ -1359,7 +1370,7 @@ void	HandleCommand(void)
             return;
         }
 
-        BBUnMakeMove(&cmGameMoveList[nGameMove-1], &bbBoard);
+        BBUnMakeMove(&cmGameMoveList[nGameMove-1], &bbBoard, TRUE);
 
         // undo is permanent!
         ZeroMemory(&cmGameMoveList[--nGameMove], sizeof(CHESSMOVE));
@@ -1599,7 +1610,7 @@ void	HandleCommand(void)
 #endif
 
                 // make the move on the board and update the official game movelist
-                BBMakeMove(&cmTempMoveList[n], &bbBoard);
+                BBMakeMove(&cmTempMoveList[n], &bbBoard, TRUE);
 
                 if (bLog)
                     fprintf(logfile, "< move accepted: %s, nFifty=%d\n", moveString, bbBoard.fifty);
@@ -1657,7 +1668,7 @@ void	HandleCommand(void)
                 if (bLog)
                     fprintf(logfile, "Ponder hit!\n");
 
-                nPonderTime = GetTickCount() - nThinkStart;
+                nPonderTime = GetTickCount64() - nThinkStart;
 
                 nEngineMode = ENGINE_THINKING;
 
@@ -1711,7 +1722,7 @@ void PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz)
 	}
 #endif
 
-    sprintf(buf, "%2d %6d %6d %12llu ", nDepth, nPVEval, (GetTickCount()-nThinkStart) / 10, nNodes);
+    sprintf(buf, "%2d %6d %6I64u %12llu ", nDepth, nPVEval, (GetTickCount64()-nThinkStart) / 10, nNodes);
 
     if (nEngineMode == ENGINE_PONDERING)
     {
@@ -1739,9 +1750,9 @@ void PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz)
 			break;
 	}
 
-    if ((GetTickCount() - nThinkStart) > 0)
+    if ((GetTickCount64() - nThinkStart) > 0)
     {
-        sprintf(moveString, "(%lld KNPS)", nNodes / (GetTickCount() - nThinkStart));
+        sprintf(moveString, "(%lld KNPS)", nNodes / (GetTickCount64() - nThinkStart));
         strcat(buf, moveString);
     }
 
@@ -1822,7 +1833,7 @@ void StartProcesses(int nCPUs)
 				&pi[n] )        // Pointer to PROCESS_INFORMATION structure
 			) 
 			{
-				printf( "CreateProcess failed (%d).\n", GetLastError() );
+				printf( "CreateProcess failed (%d).\n", (int)GetLastError() );
 			}
 		}
 	}
@@ -1898,7 +1909,10 @@ int main(void)
 		else
 		{
 			fprintf(logfile, "%s - %-14s\n", szVersion, szInfo);
-			fprintf(logfile, "log=%d, kibitz=%d, hashsize=%lld, egtbcomp=%d, egtbfolder=%s, cores=%d\n", bLog, bKibitz, dwHashSize, nEGTBCompressionType, szEGTBPath, nCPUs);
+			fprintf(logfile, "log=%d, kibitz=%d, hashsize=%lld, cores=%d\n", bLog, bKibitz, dwHashSize, nCPUs);
+#if USE_EGTB
+			fprintf(logfile, "egtbcomp = %d, egtbfolder = %s", nEGTBCompressionType, szEGTBPath);
+#endif
 		}
     }
 
@@ -1917,7 +1931,7 @@ int main(void)
 		printf("\n");
 		printf("#-------------------------------#\n");
 		printf("# %-13s - %-13s #\n", szVersion, szInfo);
-		printf("# Copyright 2023 - John Merlino #\n");
+		printf("# Copyright 2024 - John Merlino #\n");
 		printf("# All Rights Reserved           #\n");
 		printf("#-------------------------------#\n\n");
 		printf("feature done=0\n");	// just in case -- this shouldn't be harmful according to Tim Mann
@@ -1942,7 +1956,8 @@ int main(void)
     initbitboards();
     InitThink();
 
-	if (nn_load(NN_FILE) == -1)
+	char nnFileName[16] = "Myrddin.nn";
+	if (nn_load(nnFileName) == -1)
 	{
 		printf("Unable to load network data. Cannot continue\n");
 		return(0);
@@ -1952,10 +1967,8 @@ int main(void)
 	    INITIALIZE();	// prodeo book
 
 #if USE_EGTB
-    if (GaviotaTBInit() == EXIT_FAILURE)
+	if (GaviotaTBInit() == EXIT_FAILURE)
 		bNoTB = TRUE;
-#else
-	tb_available = FALSE;
 #endif
 
     bbNewGame(&bbBoard);
@@ -2056,7 +2069,7 @@ int main(void)
                         if (bLog)
                             fprintf(logfile, "< book %s\n", moveString);
 
-                        BBMakeMove(&cmChosenMove, &bbBoard);
+                        BBMakeMove(&cmChosenMove, &bbBoard, TRUE);
 						cmChosenMove.dwSignature = bbBoard.signature;
                         cmGameMoveList[nGameMove++] = cmChosenMove;
                     }
@@ -2070,7 +2083,7 @@ int main(void)
 
                 // initialize thinking params
                 bInBook = FALSE;
-                nThinkStart = GetTickCount();
+                nThinkStart = GetTickCount64();
                 nPonderTime = 0;
                 nDepth = 1;
                 nCurEval = nPrevEval = NO_EVAL;
@@ -2105,13 +2118,13 @@ int main(void)
 
 #if USE_SMP
 				if (!bSlave)
-					SendSlavesString("analyze");
+					SendSlavesString((char *)"analyze");
 #endif
 
                 // iterative depth loop
                 do
                 {
-#if USE_SMP
+#if 0 // USE_SMP
                     if (bSlave)
                     {
                         if (nSlaveNum & 1)
@@ -2180,9 +2193,11 @@ int main(void)
                     else
                         bFoundMate = FALSE;
 
+#if USE_EGTB
                     // if we have TBs and there are <=5 men on the board, just make the move
                     if (tb_available && (BitCount(bbBoard.bbOccupancy) <= 5) && (nEngineMode == ENGINE_THINKING))
                         break;
+#endif
 
                     // are we at the requested search depth due to an "sd" command?
                     if (bExactThinkDepth && (nDepth >= nThinkDepth))
@@ -2190,7 +2205,7 @@ int main(void)
 
                     nDepth++;
 
-#if 0 // USE_SMP         // more aggressive depth adjustment for some child processes
+#if 1 // USE_SMP         // more aggressive depth adjustment for some child processes
                     if (bSlave)
                     {
                         if ((nSlaveNum & 1) == 0)
@@ -2240,7 +2255,7 @@ int main(void)
 					if (!bSlave)
 					{
 						if (!bPondering)
-							SendSlavesString("stop");
+							SendSlavesString((char *)"stop");
 
 						MoveToString(moveString, &cmChosenMove, FALSE);
 						SendSlavesString(moveString);
@@ -2248,7 +2263,7 @@ int main(void)
 #endif
                     fflush(stdout);
 
-                    BBMakeMove(&cmChosenMove, &bbBoard);
+                    BBMakeMove(&cmChosenMove, &bbBoard, TRUE);
 
                     if (bLog)
                         fprintf(logfile, "< %s, nFifty=%d\n", moveString, bbBoard.fifty);
@@ -2346,7 +2361,7 @@ int main(void)
 				// save off the board so it can be restored after pondering is finished
 				bbPonderRestore = bbBoard;
 
-                BBMakeMove(&cmPonderMove, &bbBoard);
+                BBMakeMove(&cmPonderMove, &bbBoard, TRUE);
                 cmPonderMove.dwSignature = bbBoard.signature;
                 cmGameMoveList[nGameMove++] = cmPonderMove;
 

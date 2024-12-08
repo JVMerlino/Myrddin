@@ -1,6 +1,6 @@
 /* 
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -20,15 +20,16 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Myrddin.h"
 #include "Bitboards.h"
 #include "Hash.h"
-#include "TBProbe.h"
 #include "MoveGen.h"
 #include "cerebrum.h"
 
+#if USE_EGTB
+#include "TBProbe.h"
+#endif
+
 int		nEval;
 
-NN_Accumulator accumulator;
-#define NN_FILE		"myrddin.nn"
-#define NN_TO_CP	512		// multiplication factor to convert NN return value to centipawns - David's value was 1000, but the scores seemed too high
+#define NN_TO_CP	1000		// multiplication factor to convert NN return value to centipawns - this is David's suggested value
 
 /*========================================================================
 ** Evaluate - assign a "goodness" score to the current position on the
@@ -49,7 +50,6 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
     }
 #endif
 
-#if 0
     if (!tb_available)  // if tablebases are not available, check for material draw
     {
         int nTotalPieces = BitCount(EvalBoard->bbOccupancy);
@@ -60,7 +60,7 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
             goto exit;
         }
 
-        if ((nTotalPieces == 3) && (EvalBoard->phase == MINOR_PHASE))
+        if ((nTotalPieces == 3) && (BitCount(EvalBoard->bbPieces[BISHOP][WHITE] | EvalBoard->bbPieces[BISHOP][BLACK] | EvalBoard->bbPieces[KNIGHT][WHITE] | EvalBoard->bbPieces[KNIGHT][BLACK]) == 1))
         {
             nEval = 0;	// king and minor vs king
             goto exit;
@@ -68,7 +68,7 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
 
         if (nTotalPieces == 4)
         {
-            if ((EvalBoard->phase == (2 * MINOR_PHASE)) && (BitCount(EvalBoard->bbMaterial[WHITE] == 2)))
+            if ((BitCount(EvalBoard->bbPieces[BISHOP][WHITE] | EvalBoard->bbPieces[KNIGHT][WHITE]) == 1) && (BitCount(EvalBoard->bbPieces[BISHOP][BLACK] | EvalBoard->bbPieces[KNIGHT][BLACK]) == 1))
             {
                 nEval = 0;	// both sides have one minor, although, strictly speaking, it is possible to mate in these positions
                 goto exit;
@@ -99,23 +99,13 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
                 }
             }
         }
-
-        // rook and minor vs rook
-        if ((nTotalPieces == 5) && (EvalBoard->phase == ((ROOK_PHASE * 2) + MINOR_PHASE)))
-        {
-            if ((BitCount(EvalBoard->bbPieces[ROOK][WHITE])) && (BitCount(EvalBoard->bbPieces[ROOK][BLACK])))
-            {
-                nEval = 0;
-                goto exit;
-            }
-        }
     }
-#endif
 
 #if !USE_INCREMENTAL_ACC_UPDATE
-	nn_update_all_pieces(accumulator, EvalBoard->bbPieces);
+	nn_update_all_pieces(EvalBoard->Accumulator, EvalBoard->bbPieces);
 #endif
-	nEval = (int)(nn_evaluate(accumulator, EvalBoard->sidetomove) * NN_TO_CP);
+
+	nEval = (int)(nn_evaluate(EvalBoard->Accumulator, EvalBoard->sidetomove) * NN_TO_CP);
 
 exit:
 #if USE_EVAL_HASH

@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023 John Merlino
+Copyright(C) 2024 John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -78,7 +78,7 @@ int RemovePiece(BB_BOARD* Board, int square, BOOL bUpdateNN)
 
 #if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
-		nn_del_piece(accumulator, pstpiece, color, square ^ 56);
+		nn_del_piece(Board->Accumulator, pstpiece, color, square ^ 56);
 #endif
 
 	return(piece);
@@ -99,7 +99,7 @@ void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN)
 
 #if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
-		nn_add_piece(accumulator, pstpiece, color, square ^ 56);
+		nn_add_piece(Board->Accumulator, pstpiece, color, square ^ 56);
 #endif
 }
 
@@ -124,14 +124,13 @@ void MovePiece(BB_BOARD* Board, int from, int to, BOOL bUpdateNN)
 
 #if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
-		nn_mov_piece(accumulator, pstpiece, color, from ^ 56, to ^ 56);
+		nn_mov_piece(Board->Accumulator, pstpiece, color, from ^ 56, to ^ 56);
 #endif
 }
 
 void initbitboards(void)
 {
     int	sq;
-	int x, y;
 
     // bit array
     for (sq = 0; sq <= 63; sq++)
@@ -358,6 +357,8 @@ void initbitboards(void)
         bbDiagonalMoves[sq] = Bmagic(sq, 0);
 
 #if 0
+	int x, y;
+
 	// bits between squares on a rank - used for determining FRC castling legality
 	for (x = 0; x <= 6; x++)
 	{

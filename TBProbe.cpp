@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -144,11 +144,11 @@ int GaviotaTBInit(void)
     int	scheme = nEGTBCompressionType;	/* compression scheme to be used */
 
     paths = (char **) tbpaths_init();
-    paths = (char **) tbpaths_add((char **)paths, szEGTBPath);
+    paths = (char **) tbpaths_add((const char **)paths, szEGTBPath);
 
-    tb_init (verbosity, scheme, (char **) paths);
+    tb_init (verbosity, scheme, (const char **) paths);
 
-    tbcache_init(cache_size);
+    tbcache_init(cache_size, 64);
 
     tbstats_reset();
 
@@ -300,7 +300,7 @@ void GaviotaTBClose(void)
 
     tb_done();
 
-    paths = (char **) tbpaths_done((char **)paths);
+    paths = (char **) tbpaths_done((const char **)paths);
 }
 
 #endif	// USE_EGTB

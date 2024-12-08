@@ -206,7 +206,7 @@ setboard r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq - // perft(5) = 
 0x88 version (bulk counting) = 204.5s
 Original Bitboard version = 65.4s
 Improved Bitboard version = 52.6s
-NN version = 45.8s
+NN version = 56.4s
 
 Mate in 2 Chessnut
 setboard 3k4/R6R/3n4/8/8/3K4/8/8 w - - bm Rhg7; c0 "Bonus Socius (1266) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #1";

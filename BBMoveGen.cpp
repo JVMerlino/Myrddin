@@ -1,6 +1,6 @@
 /*
 Myrddin XBoard / WinBoard compatible chess engine written in C
-Copyright(C) 2023  John Merlino
+Copyright(C) 2024  John Merlino
 
 This program is free software : you can redistribute it and /or modify
 it under the terms of the GNU General Public License as published by
@@ -21,17 +21,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Myrddin.h"
 #include "bitboards.h"
 #include "magicmoves.h"
+#include "cerebrum.h"
 #include "MoveGen.h"
 #include "Eval.h"
 #include "Hash.h"
 #include "parray.inc"
 #include "FEN.h"
-#include "cerebrum.h"
-
-#if USE_INCREMENTAL_ACC_UPDATE
-NN_Accumulator	AccStack[MAX_DEPTH];
-int				AccStackIndex = 0;
-#endif
 
 #if VERIFY_BOARD
 /*========================================================================
@@ -107,13 +102,15 @@ Bitboard GetAttackers(BB_BOARD *Board, int square, int color, BOOL bNeedOnlyOne)
     attackers |= bbKingMoves[square] & Board->bbPieces[KING][color];
     if (attackers && bNeedOnlyOne)
         return(attackers);
-    attackers |= Bmagic(square, Board->bbOccupancy) & (Board->bbPieces[BISHOP][color] | Board->bbPieces[QUEEN][color]);
+	attackers |= bbPawnAttacks[color][square] & Board->bbPieces[PAWN][color];
+	if (attackers && bNeedOnlyOne)
+		return(attackers);
+	attackers |= Bmagic(square, Board->bbOccupancy) & (Board->bbPieces[BISHOP][color] | Board->bbPieces[QUEEN][color]);
     if (attackers && bNeedOnlyOne)
         return(attackers);
     attackers |= Rmagic(square, Board->bbOccupancy) & (Board->bbPieces[ROOK][color] | Board->bbPieces[QUEEN][color]);
     if (attackers && bNeedOnlyOne)
         return(attackers);
-    attackers |= bbPawnAttacks[color][square] & Board->bbPieces[PAWN][color];
 
     return(attackers);
 }
@@ -560,7 +557,7 @@ void BBUpdateCastleStatus(BB_BOARD *Board, SquareType from, SquareType to)
 ** MakeMove - makes move and returns captured piece if any
 **========================================================================
 */
-void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
+void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board, BOOL bUpdateAcc)
 {
     assert(move_to_make);
     assert(Board);
@@ -574,7 +571,6 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
     int      		moving_piece = Board->squares[from];
     int				captured_piece = Board->squares[to];
     ColorType		my_color = COLOROF(moving_piece);
-	BOOL			bUpdateAcc = FALSE;
 
     assert(from != to);
     IS_SQ_OK(from);
@@ -591,9 +587,8 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
     save_undo->captured_piece = (PieceType)captured_piece;
     save_undo->fifty_move = (BYTE)Board->fifty;
 
-#if USE_INCREMENTAL_ACC_UPDATE
-	memcpy(&AccStack[AccStackIndex++], &accumulator, sizeof(NN_Accumulator));
-	bUpdateAcc = TRUE;
+#if !USE_INCREMENTAL_ACC_UPDATE
+	bUpdateAcc = FALSE;
 #endif
 
     // fix the board signature -- other fixes may be necessary later in this function
@@ -630,7 +625,7 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
     if ((PIECEOF(moving_piece) == PAWN) || (captured_piece != EMPTY))
         Board->fifty = 0;
     else
-        Board->fifty++;
+		Board->fifty++;
 
     // move the pieces
 	if (captured_piece != EMPTY)
@@ -733,9 +728,9 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board)
 ** eUnMakeMove - Takes back a move from a board
 **========================================================================
 */
-void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
+void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board, BOOL bUpdateAcc)
 {
-    assert(move_to_unmake);
+	assert(move_to_unmake);
     assert(Board);
 
     PUNDOMOVE 	save_undo;
@@ -743,15 +738,15 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
     SquareType	to = move_to_unmake->tsquare;
     ColorType   which_color = COLOROF(Board->squares[to]);
 
-    save_undo = &move_to_unmake->save_undo;
-
-#if USE_INCREMENTAL_ACC_UPDATE
-	memcpy(&accumulator, AccStack[--AccStackIndex], sizeof(NN_Accumulator));
+#if !USE_INCREMENTAL_ACC_UPDATE
+	bUpdateAcc = FALSE;
 #endif
 
-	MovePiece(Board, to, from, FALSE);
+	save_undo = &move_to_unmake->save_undo;
+
+	MovePiece(Board, to, from, bUpdateAcc);
     if (save_undo->captured_piece)
-        PutPiece(Board, save_undo->captured_piece, save_undo->capture_square, FALSE);
+        PutPiece(Board, save_undo->captured_piece, save_undo->capture_square, bUpdateAcc);
 
     Board->castles = save_undo->castle_status;
     Board->epSquare = save_undo->en_passant_pawn;
@@ -761,23 +756,23 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board)
 
     if (move_to_unmake->moveflag & MOVE_PROMOTED)
     {
-        RemovePiece(Board, from, FALSE);
-        PutPiece(Board, which_color | PAWN, from, FALSE);
+        RemovePiece(Board, from, bUpdateAcc);
+        PutPiece(Board, which_color | PAWN, from, bUpdateAcc);
     }
 
     if (move_to_unmake->moveflag & MOVE_OO)
     {
         if (COLOROF(Board->squares[from]) == XWHITE)
-			MovePiece(Board, BB_F1, BB_H1, FALSE);
+			MovePiece(Board, BB_F1, BB_H1, bUpdateAcc);
         else
-			MovePiece(Board, BB_F8, BB_H8, FALSE);
+			MovePiece(Board, BB_F8, BB_H8, bUpdateAcc);
     }
     else if (move_to_unmake->moveflag & MOVE_OOO)
     {
         if (COLOROF(Board->squares[from]) == XWHITE)
-			MovePiece(Board, BB_D1, BB_A1, FALSE);
+			MovePiece(Board, BB_D1, BB_A1, bUpdateAcc);
         else
-			MovePiece(Board, BB_D8, BB_A8, FALSE);
+			MovePiece(Board, BB_D8, BB_A8, bUpdateAcc);
     }
 
     Board->sidetomove = OPPONENT(Board->sidetomove);
@@ -831,7 +826,7 @@ void	BBUnMakeNullMove(CHESSMOVE *cmNull, BB_BOARD *Board)
 
     save_undo = &cmNull->save_undo;
 
-    Board->castles = save_undo->castle_status;
+	Board->castles = save_undo->castle_status;
     Board->epSquare = save_undo->en_passant_pawn;
     Board->inCheck = save_undo->in_check_status;
     Board->fifty = save_undo->fifty_move;
