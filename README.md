@@ -1,8 +1,8 @@
-Myrddin v0.91 Release Notes -- 10/20/24
+Myrddin v0.92 Release Notes -- 12/7/24
 --------------------------------------------------------------------------------
 Myrddin is a winboard-compliant chess engine to a reasonable degree. It supports protover 1 primarily to support the Chessmaster interface, and also protover 2.
 
-Version 0.91 plays approximately 2900 ELO (CCRL) at 1 CPU, 2980 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 275 points compared to version 0.90.
+Version 0.92 plays approximately 3060 ELO (CCRL) at 1 CPU, 3125 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 70 points compared to version 0.91.
 
 The following winboard commands are supported:\
 protover\
@@ -72,6 +72,14 @@ Myrddin chess engine written by John Merlino, with lots of inspiration, assistan
 
 Version List
 ---------------
+Version 0.92 (12/7/24) Change List:\
+-- Now doing incremental updates to the NN accumulator during make/unmake move\
+-- Now compiling with clang (within MSVC IDE)\
+-- Restored David Carteau's recommended eval multiplier - scores will be about 2x higher than before\
+-- Now clearing Killer move scores with every depth\
+-- Fixed potential instability/crash due to the move stack possibly becoming greater than MAX_DEPTH\
+-- Minor optimizations to PVS implementation and cutoff ordering
+
 Version 0.91 (10/20/24) Change List:\
 -- Added NNUE probing code by David Carteau (Orion / Cerebrum). All code related to the HCE has been removed, as well as the pawn hash\
 -- Network created by me using games from CCRL, Lichess, and Myrddin testing (both self-play and against other engines)\
