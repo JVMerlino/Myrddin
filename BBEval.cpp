@@ -21,7 +21,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Bitboards.h"
 #include "Hash.h"
 #include "MoveGen.h"
-#include "cerebrum.h"
+
+#if USE_CEREBRUM_1_0
+#include "cerebrum 1-0.h"
+#else
+#include "cerebrum 1-1.h"
+#endif
 
 #if USE_EGTB
 #include "TBProbe.h"
@@ -40,14 +45,14 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
 {
 #if USE_EVAL_HASH
     EVAL_HASH_ENTRY *found = ProbeEvalHash(EvalBoard->signature);
-    if (found)
-    {
-        if (found->nEval <= nAlpha)
-            return(nAlpha);
-        if (found->nEval >= nBeta)
-            return(nBeta);
-        return(found->nEval);
-    }
+	if (found)
+	{
+		if (found->nEval <= nAlpha)
+			return(nAlpha);
+		if (found->nEval >= nBeta)
+			return(nBeta);
+		return(found->nEval);
+	}
 #endif
 
     if (!tb_available)  // if tablebases are not available, check for material draw
@@ -112,9 +117,9 @@ exit:
     SaveEvalHash(nEval, EvalBoard->signature);
 #endif
 
-    if (nEval <= nAlpha)
-        return(nAlpha);
-    if (nEval >= nBeta)
-        return(nBeta);
-    return(nEval);
+	if (nEval <= nAlpha)
+		return(nAlpha);
+	if (nEval >= nBeta)
+		return(nBeta);
+	return(nEval);
 }

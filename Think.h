@@ -32,7 +32,8 @@ enum thinking_modes
     PONDER,				// tell the engine to begin pondering the next time through the main loop, only used when playing a game
 };
 
-typedef struct KILLER {
+typedef struct 
+{
     CHESSMOVE	cmKiller;
     long		nEval;
 } KILLER, *PKILLER;

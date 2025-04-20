@@ -30,10 +30,10 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 								// in check                     ||||||||
 #define MOVE_CHECKMATE  0x0400  // move causes checkmate    ---+||||||||
 #define MOVE_NULL       0x0800  // move is null move        --+|||||||||
-#define	MOVE_SEARCHED	0x1000	// move has been searched   -+||||||||||	// not in use (yet)
+#define	MOVE_SEARCHED	0x1000	// move has been searched   -+||||||||||
 								//                           snmrccpkqeppp
 
-#define MOVE_NOT_QUIET	0x01F0	// castle, promotion, check, or capture
+#define MOVE_NOT_QUIET	0x0170	// castle, promotion, or capture
 
 #define  FIRST_PROMOTE  (QUEEN)
 #define  LAST_PROMOTE   (KNIGHT)

@@ -36,10 +36,9 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define FALSE	0
 #define TRUE	1
 
-#define clamp(x, upper, lower) (min(upper, max(x, lower)))
-
 #define USE_HASH			TRUE
 #if USE_HASH
+#define USE_HASH_IN_QS		FALSE
 #define USE_EVAL_HASH		TRUE
 #endif
 
@@ -47,8 +46,9 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define MAX_ASPIRATION_SEARCHES	3
 #define ASPIRATION_WINDOW	16
 
-#define USE_IID				TRUE
-#define USE_IIR             FALSE
+#define USE_IID				FALSE
+#define USE_IIR             TRUE
+#define USE_IMPROVING		FALSE
 
 #define USE_HISTORY			TRUE
 #define USE_KILLERS			TRUE
@@ -56,9 +56,9 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #define USE_NULL_MOVE		TRUE
 
-#define USE_AGGRESSIVE_LMR	TRUE
 #define USE_FUTILITY_PRUNING	TRUE
 #define USE_MATE_DISTANCE_PRUNING   TRUE
+#define USE_LMP				FALSE
 
 #define USE_SEE				TRUE	
 #define USE_SEE_MOVE_ORDER	FALSE	// not helpful
@@ -68,7 +68,9 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define DEBUG_SMP			FALSE	// adds lots of logging!
 #endif
 
-#define USE_INCREMENTAL_ACC_UPDATE	TRUE
+#define USE_INCREMENTAL_ACC_UPDATE TRUE
+
+#define USE_CEREBRUM_1_0	TRUE
 
 #define USE_EGTB			TRUE
 
@@ -87,12 +89,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define min(a,b) ((a) > (b) ? (b) : (a))
 #endif
 
-#define MAX_DEPTH			128
+#define MAX_DEPTH	128
 
-#define INFINITY			0x8000
-#define CHECKMATE			0x7FFF
-#define NO_EVAL				0xDEAD
-#define MATE_THREAT			0x4000
+#define MAX_WINDOW	0x8000
+#define CHECKMATE	0x7FFF
+#define NO_EVAL		0xDEAD
+#define MATE_THREAT	0x4000
 
 #define NCOLORS	2
 #define NPIECES	6
@@ -169,7 +171,7 @@ typedef unsigned long long	PosSignature;
 
 ////////////////////////////////////////////////////////////////////////////////
 // a chess move
-typedef struct UNDOMOVE
+typedef struct
 {
     PosSignature	dwSignature;
     BYTE			castle_status;
@@ -180,26 +182,26 @@ typedef struct UNDOMOVE
     PieceType		captured_piece;
 } UNDOMOVE, *PUNDOMOVE;
 
-typedef struct CHESSMOVE
+typedef struct
 {
     PosSignature	dwSignature;
-    long 			nScore;
+    int 			nScore;	// for move ordering
     MoveFlagType	moveflag;
     SquareType		fsquare;
     SquareType		tsquare;
     UNDOMOVE		save_undo;
 } CHESSMOVE;
 
-typedef struct PVMOVE
+typedef struct
 {
 	MoveFlagType	moveflag;
 	SquareType		fsquare;
 	SquareType		tsquare;
 } PVMOVE;
 
-typedef struct PV
+typedef struct
 {
-    long		pvLength;
+    int			pvLength;
     PVMOVE		pv[MAX_DEPTH+10];
 } PV;
 
@@ -207,10 +209,10 @@ extern BOOL			bSlave;
 extern int			nSlaveNum;
 
 #if USE_SMP
-#define MAX_CPUS			16
-#define NUM_SLAVE_STRINGS	4
+#define MAX_CPUS			32
+#define NUM_SLAVE_STRINGS	8
 
-typedef struct SLAVE_DATA
+typedef struct
 {
     char		szEngineCommand[NUM_SLAVE_STRINGS][256];
 	int			nNextToSend;
@@ -219,12 +221,12 @@ typedef struct SLAVE_DATA
 	BOOL		bLocked;
 } SLAVE_DATA, *PSLAVE_DATA;
 
-typedef struct SHARED_MEM
+typedef struct
 {
 	SLAVE_DATA	sdSlaveData[MAX_CPUS - 1];
 } SHARED_MEM, *PSHARED_MEM;
 
-typedef struct SHARED_HASH
+typedef struct
 {
     PVOID HashTable;
     PVOID EvalHashTable;
@@ -247,9 +249,9 @@ extern CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 #define USE_BULK_COUNTING   TRUE    // for perft
 typedef struct
 {
-	char	fen[120];
-	int		depth;
-	int		value;
+	char		fen[120];
+	int			depth;
+	unsigned long long	value;
 } PERFT_TEST;
 
 #define NUM_PERFT_TESTS	12

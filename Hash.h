@@ -17,7 +17,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
 #pragma pack(push,1)
-typedef struct hash_item
+typedef struct
 {
     PosSignature	dwSignature;
     short			nEval;
@@ -28,19 +28,19 @@ typedef struct hash_item
     SquareType		to;
 } hash_item;
 
-typedef union HASH_ENTRY {
+typedef union {
 	hash_item h;
 	long long  l[2];
 } HASH_ENTRY;
 
-typedef struct EVAL_HASH_ENTRY
+typedef struct
 {
     PosSignature	dwSignature;
     short			nEval;
 } EVAL_HASH_ENTRY;
 #pragma pack(pop)
 
-#define DEFAULT_HASH_SIZE		(0x800000)	// 128MB
+#define DEFAULT_HASH_SIZE		(0x1000000)	// 256MB
 
 #define HASH_NOT_EVAL		(0x00)
 #define HASH_ALPHA			(0x10)

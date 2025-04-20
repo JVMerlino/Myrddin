@@ -33,7 +33,7 @@ HASH_ENTRY		*HashTable = NULL;
 EVAL_HASH_ENTRY *EvalHashTable = NULL;
 
 size_t	dwHashSize = DEFAULT_HASH_SIZE; // results in 128MB of hash
-size_t	dwEvalHashSize = 0x200000;		// results in 32MB of eval hash
+size_t	dwEvalHashSize = 0x2000000;		// results in 32MB of eval hash
 
 // short	nHashAge = 0;
 
@@ -432,8 +432,12 @@ void CloseHash(void)
 #endif
 
 #if USE_SMP
-    if (hSharedHash)
-        CloseHandle(hSharedHash);
+	UnmapViewOfFile(smSharedMem);
+	UnmapViewOfFile(HashTable);
+	if (hSharedMem)
+		CloseHandle(hSharedMem);
+	if (hSharedHash)
+		CloseHandle(hSharedHash);
 #else
     free(HashTable);
 

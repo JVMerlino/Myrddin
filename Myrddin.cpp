@@ -32,12 +32,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 // The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// Now doing incremental updates to the NN accumulator during make/unmake move
-// Now compiling with clang (within MSVC IDE) - 45% speedup compared to MSVC compiler! Insane!!
-// Restored David Carteau's recommended eval multiplier - scores will be about 2x higher than before
-// Now clearing Killer move scores with every depth
-// Fixed potential instability/crash due to the move stack possibly becoming greater than MAX_DEPTH
-// Minor optimizations to PVS implementation and cutoff ordering
+// Now using IIR instead of IID
+// Minor adjutments to LMR conditions
+// Now supporting the xboard "memory" command (requested by Martin Sedlak)
+// Increased the maximum number of SMP processes to 32 (requested by Lars Hallerstrom)
+// Fixed a bug in pondering introduced in v0.90. Myrddin would restart thinking at depth 1 even if the expected ponder move was made by the opponent.
+// Fixed a rare bug that could cause Myrddin to crash when using logfiles
+// Found a bug that caused the Eval hash size to be 2MB instead of 32MB.
+// Default Transposition hash size is now 256MB
 //
 // TODO -- in no particular order
 
@@ -55,15 +57,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include "book.h"
 #include "hash.h"
 #include "magicmoves.h"
+
+#if USE_CEREBRUM_1_0
 #include "cerebrum.h"
+#else
+#include "cerebrum 1-1.h"
+#endif
 
 #if USE_EGTB
 #include "tbprobe.h"
 #include "gtb-probe.h"
 #endif
 
-char	szVersion[16] = "Myrddin 0.92";
-char	szInfo[16] = "(12/7/24)";
+char	szVersion[16] = "Myrddin 0.93";
+char	szInfo[32] = "4/18/25";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
@@ -171,6 +178,32 @@ void ZeroSlaveNodes(void)
 #endif
 
 /*========================================================================
+** SetHashSize - set the hash size based on ini file setting or GUI command
+**========================================================================
+*/
+void SetHashSize(int size)
+{
+	BOOL	bPowerOf2;
+
+	bPowerOf2 = !(size & (size - 1)) && size;	// thanks to http://graphics.stanford.edu/~seander/bithacks.html
+
+	if (!bPowerOf2)
+	{
+		size >>= 1;		// round DOWN!
+		size--;
+		size |= size >> 1;
+		size |= size >> 2;
+		size |= size >> 4;
+		size |= size >> 8;
+		size |= size >> 16;
+		size++;
+	}
+
+	dwHashSize = (size << 20);	// multiply by 1MB
+	dwHashSize >>= 4;	// divide by size of hash entry (rounding up to power of 2)
+}
+
+/*========================================================================
 ** ParseIniFile -- Handle commands from the initialization file
 **========================================================================
 */
@@ -204,28 +237,12 @@ void ParseIniFile(void)
 #if USE_HASH
         else if (strnicmp(command, "hashsize=", 9) == 0)
         {
-            size_t	v;
-            BOOL	bPowerOf2;
+            int	v;
 
             // "hashsize" -- valid values: any number between 0 and 2048, specifying requested size in MB
             // preferably a power of 2, will round DOWN if not
             v = atoi(&command[9]);
-            bPowerOf2 = !(v & (v - 1)) && v;	// thanks to http://graphics.stanford.edu/~seander/bithacks.html
-
-            if (!bPowerOf2)
-            {
-                v >>= 1;		// round DOWN!
-                v--;
-                v |= v >> 1;
-                v |= v >> 2;
-                v |= v >> 4;
-                v |= v >> 8;
-                v |= v >> 16;
-                v++;
-            }
-
-            dwHashSize = (v << 20);	// multiply by 1MB
-            dwHashSize >>= 4;	// divide by size of hash entry (rounding up to power of 2)
+			SetHashSize(v);
         }
 #endif
 #if USE_EGTB
@@ -659,7 +676,7 @@ void	HandleCommand(void)
             printf("feature sigint=0 sigterm=0 reuse=0 analyze=1\n");
 			printf("feature variants=normal\n");
 			printf("feature myname=\"%s\"\n", szVersion);
-            printf("feature done=1\n");
+			printf("feature done=1\n");
             fflush(stdout);
         }
 
@@ -677,7 +694,31 @@ void	HandleCommand(void)
         return;
     }
 
-    if (!strcmp(command, "new"))
+#if USE_HASH
+	if (!strcmp(command, "memory"))
+	{
+		int size;
+
+		if (nEngineMode == ENGINE_THINKING || nEngineMode == ENGINE_ANALYZING || nEngineMode == ENGINE_PONDERING)
+		{
+			NotHandled();
+			PromptForInput();
+			return;
+		}
+
+		// adjust the memory size as requested by the GUI
+		CloseHash();
+		sscanf(line, "%s %d", command, &size);
+		SetHashSize(size);
+		InitHash();
+
+		PromptForInput();
+
+		return;
+	}
+#endif
+
+	if (!strcmp(command, "new"))
     {
 #if USE_SMP
 		if (!bSlave)
@@ -902,7 +943,7 @@ void	HandleCommand(void)
 
 			printf("perft %d = %I64u in %.2f seconds - ", perft_tests[x].depth, nPerftMoves, (float)((GetTickCount64() - starttime)) / 1000);
 			if (nPerftMoves != perft_tests[x].value)
-				printf("FAILED! Should be %d\n", perft_tests[x].value);
+				printf("FAILED! Should be %I64u\n", perft_tests[x].value);
 			else
 				printf("passed\n");
 		}
@@ -1315,12 +1356,12 @@ void	HandleCommand(void)
         else
             nClockRemaining = nTime * 10;
 
-        nClockRemaining -= TIME_BANK;	// use a "bank" of two seconds, primarily for bullet time controls
-        if (nClockRemaining <= 0)
+		nClockRemaining -= TIME_BANK;	// use a safety "bank", primarily for bullet time controls
+		if (nClockRemaining <= 0)
             nClockRemaining = 0;
 
-        if (nClockRemaining <= PANIC_THRESHHOLD)
-            nDivisor = PANIC_CLOCK_TO_USE;
+		if (nClockRemaining <= PANIC_THRESHHOLD)
+			nDivisor = PANIC_CLOCK_TO_USE;
 
         if (nFischerInc > 0)	// Fischer controls
             nThinkTime = (nClockRemaining / nDivisor) + nFischerInc;
@@ -1662,13 +1703,13 @@ void	HandleCommand(void)
         {
             if ((cmTempMoveList[n].fsquare == cmPonderMove.fsquare) &&
                     (cmTempMoveList[n].tsquare == cmPonderMove.tsquare) &&
-                    (cmTempMoveList[n].moveflag == cmPonderMove.moveflag))
+                    (cmTempMoveList[n].moveflag == (cmPonderMove.moveflag & ~MOVE_SEARCHED)))
             {
                 // we got a hit on the ponder move
                 if (bLog)
                     fprintf(logfile, "Ponder hit!\n");
 
-                nPonderTime = GetTickCount64() - nThinkStart;
+                nPonderTime = (unsigned int)(GetTickCount64() - nThinkStart);
 
                 nEngineMode = ENGINE_THINKING;
 
@@ -1687,7 +1728,7 @@ void	HandleCommand(void)
                 if (bLog)
                     fprintf(logfile, "No Ponder hit!\n");
 
-                nEngineCommand = END_THINKING;
+				nEngineCommand = END_THINKING;
             }
         }
 
@@ -1773,7 +1814,7 @@ void PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz)
 	strcat(buf, "\n");
 
     if (bPost && !bSlave)
-        printf(buf);
+        printf("%s", buf);
 
     if (!bSlave && (bKibitz || bComputer) && bPrintKibitz)
     {
@@ -1783,7 +1824,7 @@ void PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz)
                 printf("tellics kibitz Mate in %d\n", (CHECKMATE - nPVEval - 1) / 2);
     }
     if (bLog)
-        fprintf(logfile, buf);
+        fprintf(logfile, "%s", buf);
 
 #if SHOW_QS_NODES
         printf("%12llu qnodes - %d pct\n", nQNodes, (nQNodes * 100 / nSearchNodes));
@@ -1896,7 +1937,7 @@ int main(void)
 
     if (bLog)
     {
-        char	fn[32];
+        char	fn[128];
 		_timeb  tb;
 
         _mkdir("logs");
@@ -1931,7 +1972,7 @@ int main(void)
 		printf("\n");
 		printf("#-------------------------------#\n");
 		printf("# %-13s - %-13s #\n", szVersion, szInfo);
-		printf("# Copyright 2024 - John Merlino #\n");
+		printf("# Copyright 2025 - John Merlino #\n");
 		printf("# All Rights Reserved           #\n");
 		printf("#-------------------------------#\n\n");
 		printf("feature done=0\n");	// just in case -- this shouldn't be harmful according to Tim Mann
@@ -1956,7 +1997,8 @@ int main(void)
     initbitboards();
     InitThink();
 
-	char nnFileName[16] = "Myrddin.nn";
+	char nnFileName[32] = NN_FILE;
+//	nn_convert();
 	if (nn_load(nnFileName) == -1)
 	{
 		printf("Unable to load network data. Cannot continue\n");
@@ -2239,7 +2281,7 @@ int main(void)
                 if ((evalPV.pvLength || (nEngineCommand == END_THINKING)) && (nEngineMode == ENGINE_THINKING) &&
                         (nEngineCommand != STOP_THINKING))
                 {
-                    if ((nEval == INFINITY) || (nEval == -INFINITY))
+                    if ((nEval == MAX_WINDOW) || (nEval == -MAX_WINDOW))
                         // in case the search for the current depth did not finish with its first move
                         PrintPV(nPrevPVEval, OPPONENT(bbBoard.sidetomove), '\0', TRUE);
                     else

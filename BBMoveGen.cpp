@@ -21,7 +21,6 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Myrddin.h"
 #include "bitboards.h"
 #include "magicmoves.h"
-#include "cerebrum.h"
 #include "MoveGen.h"
 #include "Eval.h"
 #include "Hash.h"
@@ -102,15 +101,13 @@ Bitboard GetAttackers(BB_BOARD *Board, int square, int color, BOOL bNeedOnlyOne)
     attackers |= bbKingMoves[square] & Board->bbPieces[KING][color];
     if (attackers && bNeedOnlyOne)
         return(attackers);
-	attackers |= bbPawnAttacks[color][square] & Board->bbPieces[PAWN][color];
+    attackers |= bbPawnAttacks[color][square] & Board->bbPieces[PAWN][color];
 	if (attackers && bNeedOnlyOne)
 		return(attackers);
 	attackers |= Bmagic(square, Board->bbOccupancy) & (Board->bbPieces[BISHOP][color] | Board->bbPieces[QUEEN][color]);
     if (attackers && bNeedOnlyOne)
         return(attackers);
     attackers |= Rmagic(square, Board->bbOccupancy) & (Board->bbPieces[ROOK][color] | Board->bbPieces[QUEEN][color]);
-    if (attackers && bNeedOnlyOne)
-        return(attackers);
 
     return(attackers);
 }
@@ -424,6 +421,7 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
 
     BBGenerateNormalMoves(Board, legal_move_list, &pseudo_moves, color, CapturesOnly);
 
+	// castles
     if (Board->castles && !Board->inCheck && !CapturesOnly)
         BBGenerateCastles(Board, legal_move_list, &pseudo_moves, color);	// generates legal castles only!
 
@@ -468,7 +466,7 @@ void BBGenerateAllMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *total
         else if (flag & MOVE_PROMOTED)
         {
             RemovePiece(Board, to, FALSE);
-            PutPiece(Board, (color == WHITE ? XWHITE | flag & MOVE_PIECEMASK : XBLACK | flag & MOVE_PIECEMASK), to, FALSE);
+            PutPiece(Board, (color == WHITE ? XWHITE | (flag & MOVE_PIECEMASK) : XBLACK | (flag & MOVE_PIECEMASK)), to, FALSE);
         }
 
         if (GetAttackers(Board, newkingsquare, OPPONENT(color), TRUE))	// move left king in check, so it is illegal

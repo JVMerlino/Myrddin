@@ -35,7 +35,11 @@ typedef uint64_t Bitboard;
 #include <intrin.h>
 #endif
 
-#include "cerebrum.h"
+#if USE_CEREBRUM_1_0
+#include "cerebrum 1-0.h"
+#else
+#include "cerebrum 1-1.h"
+#endif
 
 enum SQUARES {
     BB_A8 = 0, BB_B8, BB_C8, BB_D8, BB_E8, BB_F8, BB_G8, BB_H8,
@@ -196,11 +200,9 @@ __inline Bitboard GetMSB(Bitboard bb)
 }
 #endif
 
-typedef struct BB_BOARD {
+typedef struct 
+{
 	NN_Accumulator Accumulator;
-#if USE_INCREMENTAL_ACC_UPDATE
-//	NN_Accumulator SavedAcc;
-#endif
     Bitboard	bbPieces[6][2];
     Bitboard	bbMaterial[2];
     Bitboard	bbOccupancy;
@@ -220,12 +222,13 @@ extern Bitboard bbPawnAttacks[2][64];
 extern Bitboard bbKnightMoves[64];
 extern Bitboard bbKingMoves[64];
 extern Bitboard bbPassedPawnMask[2][64];
-extern Bitboard bbDiagonalMoves[64];
-extern Bitboard bbStraightMoves[64];
-extern Bitboard bbBetween[8][8];
-extern Bitboard RankMask[8], FileMask[8];
+extern const Bitboard RankMask[8], FileMask[8];
 
-int RemovePiece(BB_BOARD *Board, int square, BOOL bUpdateNN);
+// extern Bitboard bbDiagonalMoves[64];
+// extern Bitboard bbStraightMoves[64];
+// extern Bitboard bbBetween[8][8];
+
+void RemovePiece(BB_BOARD *Board, int square, BOOL bUpdateNN);
 void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN);
 void MovePiece(BB_BOARD* Board, int from, int to, BOOL bUpdateNN);
 DWORD BitScan(Bitboard b);

@@ -21,7 +21,12 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Myrddin.h"
 #include "Bitboards.h"
 #include "Eval.h"
+
+#if USE_CEREBRUM_1_0
 #include "cerebrum.h"
+#else
+#include "cerebrum 1-1.h"
+#endif
 
 extern NN_Accumulator accumulator;
 
@@ -31,21 +36,24 @@ Bitboard	bbPawnMoves[2][64];
 Bitboard	bbPawnAttacks[2][64];
 Bitboard	bbKnightMoves[64];
 Bitboard	bbKingMoves[64];
-Bitboard	bbDiagonalMoves[64];
-Bitboard	bbStraightMoves[64];
 Bitboard	Bit[64];
-Bitboard	bbBetween[8][8];
 Bitboard	wkc, wqc, bkc, bqc;
 
-Bitboard RankMask[8] =
+// Bitboard	bbDiagonalMoves[64];
+// Bitboard	bbStraightMoves[64];
+// Bitboard	bbBetween[8][8];
+
+const Bitboard RankMask[8] =
 {
     BB_RANK_8, BB_RANK_7, BB_RANK_6, BB_RANK_5, BB_RANK_4, BB_RANK_3, BB_RANK_2, BB_RANK_1
 };
 
-Bitboard FileMask[8] =
+const Bitboard FileMask[8] =
 {
     BB_FILE_A, BB_FILE_B, BB_FILE_C, BB_FILE_D, BB_FILE_E, BB_FILE_F, BB_FILE_G, BB_FILE_H
 };
+
+// int nPiecePhaseVals[NPIECES] = { 0, QUEEN_PHASE, ROOK_PHASE, MINOR_PHASE, MINOR_PHASE, PAWN_PHASE };
 
 #if 0
 int VFlipSquare[64] = {
@@ -62,7 +70,7 @@ int VFlipSquare[64] = {
 
 BB_BOARD	bbBoard;
 
-int RemovePiece(BB_BOARD* Board, int square, BOOL bUpdateNN)
+void RemovePiece(BB_BOARD* Board, int square, BOOL bUpdateNN)
 {
 	IS_SQ_OK(square);
 	assert(Board->squares[square]);
@@ -78,10 +86,12 @@ int RemovePiece(BB_BOARD* Board, int square, BOOL bUpdateNN)
 
 #if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
+#if USE_CEREBRUM_1_0
 		nn_del_piece(Board->Accumulator, pstpiece, color, square ^ 56);
+#else
+		nn_del_piece(Board->Accumulator, 5 - pstpiece, color, square ^ 56);
 #endif
-
-	return(piece);
+#endif
 }
 
 void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN)
@@ -99,7 +109,11 @@ void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN)
 
 #if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
+#if USE_CEREBRUM_1_0
 		nn_add_piece(Board->Accumulator, pstpiece, color, square ^ 56);
+#else
+		nn_add_piece(Board->Accumulator, 5 - pstpiece, color, square ^ 56);
+#endif
 #endif
 }
 
@@ -124,7 +138,11 @@ void MovePiece(BB_BOARD* Board, int from, int to, BOOL bUpdateNN)
 
 #if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
+#if USE_CEREBRUM_1_0
 		nn_mov_piece(Board->Accumulator, pstpiece, color, from ^ 56, to ^ 56);
+#else
+		nn_mov_piece(Board->Accumulator, 5 - pstpiece, color, from ^ 56, to ^ 56);
+#endif
 #endif
 }
 
@@ -348,15 +366,15 @@ void initbitboards(void)
         }
     }
 
-    // straight attacks
+#if 0
+	// straight attacks
     for (sq = 0; sq <= 63; sq++)
         bbStraightMoves[sq] = (RankMask[Rank(sq)] | FileMask[File(sq)]) & ~Bit[sq];
 
-    // diagonal attacks
+	// diagonal attacks
     for (sq = 0; sq <= 63; sq++)
         bbDiagonalMoves[sq] = Bmagic(sq, 0);
 
-#if 0
 	int x, y;
 
 	// bits between squares on a rank - used for determining FRC castling legality
