@@ -81,7 +81,7 @@ Version 0.93 (4/18/25) Change List:\
 -- Fixed a bug in pondering introduced in v0.90. Myrddin would restart thinking at depth 1 even if the expected ponder move was made by the opponent.\
 -- Fixed a rare bug that could cause Myrddin to crash when using logfiles\
 -- Found a bug that caused the Eval hash size to be 2MB instead of 32MB\
--- Default Transposition hash size is now 256MB\
+-- Default Transposition hash size is now 256MB
 
 Version 0.92 (12/7/24) Change List:\
 -- Now doing incremental updates to the NN accumulator during make/unmake move\
