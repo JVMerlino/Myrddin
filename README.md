@@ -4,6 +4,8 @@ Myrddin is a winboard-compliant chess engine to a reasonable degree. It supports
 
 Version 0.93 plays approximately 3150 ELO (CCRL) at 1 CPU, 3155 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 50 points compared to version 0.92.
 
+**KNOWN ISSUES: Version 0.93 has a bug such that requesting more than 1GB of transposition hash memory will cause significantly worse play. This will be fixed in the next release.**
+
 The following winboard commands are supported:\
 protover\
 xboard\
