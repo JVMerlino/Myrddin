@@ -75,7 +75,7 @@ Version List
 ---------------
 Version 0.93 (4/18/25) Change List:\
 -- Now using IIR instead of IID\
--- Minor adjutments to LMR conditions\
+-- Minor adjustments to LMR conditions\
 -- Now supporting the xboard "memory" command (requested by Martin Sedlak)\
 -- Increased the maximum number of SMP processes to 32 (requested by Lars Hallerstrom)\
 -- Fixed a bug in pondering introduced in v0.90. Myrddin would restart thinking at depth 1 even if the expected ponder move was made by the opponent.\
