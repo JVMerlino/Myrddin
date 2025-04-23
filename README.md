@@ -1,8 +1,8 @@
-Myrddin v0.92 Release Notes -- 12/7/24
+Myrddin v0.93 Release Notes -- 4/18/25
 --------------------------------------------------------------------------------
 Myrddin is a winboard-compliant chess engine to a reasonable degree. It supports protover 1 primarily to support the Chessmaster interface, and also protover 2.
 
-Version 0.92 plays approximately 3090 ELO (CCRL) at 1 CPU, 3155 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 100 points compared to version 0.91.
+Version 0.93 plays approximately 3150 ELO (CCRL) at 1 CPU, 3155 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 50 points compared to version 0.92.
 
 The following winboard commands are supported:\
 protover\
@@ -20,6 +20,7 @@ level\
 sd\
 st\
 hard/easy\
+memory\
 cores\
 result\
 undo\
@@ -41,7 +42,7 @@ Winboard UI notes: \
 -- Post is ON by default, as opposed to the winboard protocol. This is just for debugging convenience and it appears that a lot of engines do this anyway.
 
 General Notes:\
--- This the first version of Myrddin to use an "NNUE" architecture for position evaluation. The code was graciously provided by David Carteau (Orion).\
+-- Myrddin uses an "NNUE" architecture for position evaluation. The code was graciously provided by David Carteau (Orion).\
 -- Myrddin's "very lazy SMP" implementation uses multiple secondary processes to fill the transposition, eval and pawn hash tables so the primary process can search deeper in the same amount of time.\
 -- Myrddin uses Pradu Kannan's "magicmoves" code for move generation of sliding pieces.\
 -- Search is basic alpha/beta, with reasonable and generally conservative extensions and reductions.\
@@ -56,22 +57,32 @@ FULL DISCLOSURE: \
 Myrddin's Winboard interface is based on Tom Kerrigan's excellent TSCP engine, for which Tom has graciously given permission.
 
 Myrddin chess engine written by John Merlino, with lots of inspiration, assistance and patience (and perhaps some code) by:\
-// Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's site)\
-// Lars Hallerstrom - The Mad Tester!\
-// David Carteau - Orion and Cerebrum (provided Cerebrum NN library)\
-// Martin Sedlak - Cheng (guided me through Texel tuning)\
-// Dann Corbit - Helped bring the first bitboard version of Myrddin to release\
-// Bruce Moreland - Gerbil (well-documented code on his website taught me the basics)\
-// Tom Kerrigan - TSCP (a great starting point)\
-// Dr. Robert Hyatt - Crafty (helped us all)\
-// Ed Schröder and Jeroen Noomen - ProDeo Opening Book\
-// Andres Valverde - EveAnn and part of the Dirty team\
-// Pradu Kannan - Magicmoves bitboard move generator for sliding pieces\
-// Vladimir Medvedev - Greko (showed how strong a small, simple program could be)\
-// The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
+–- Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's archive site)\
+–- Lars Hallerstrom - The Mad Tester!\
+–- David Carteau - Orion and Cerebrum (provided Cerebrum NN library)\
+–- Martin Sedlak - Cheng (guided me through Texel tuning)\
+–- Dann Corbit - Helped bring the first bitboard version of Myrddin to release\
+–- Bruce Moreland - Gerbil (well-documented code on his website taught me the basics)\
+–- Tom Kerrigan - TSCP (a great starting point)\
+–- Dr. Robert Hyatt - Crafty (helped us all)\
+–- Ed Schröder and Jeroen Noomen - ProDeo Opening Book\
+–- Andres Valverde - EveAnn and part of the Dirty team\
+–- Pradu Kannan - Magicmoves bitboard move generator for sliding pieces\
+–- Vladimir Medvedev - Greko (showed how strong a small, simple program could be)\
+–- The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 
 Version List
 ---------------
+Version 0.93 (4/18/25) Change List:\
+-- Now using IIR instead of IID\
+-- Minor adjutments to LMR conditions\
+-- Now supporting the xboard "memory" command (requested by Martin Sedlak)\
+-- Increased the maximum number of SMP processes to 32 (requested by Lars Hallerstrom)\
+-- Fixed a bug in pondering introduced in v0.90. Myrddin would restart thinking at depth 1 even if the expected ponder move was made by the opponent.\
+-- Fixed a rare bug that could cause Myrddin to crash when using logfiles\
+-- Found a bug that caused the Eval hash size to be 2MB instead of 32MB\
+-- Default Transposition hash size is now 256MB\
+
 Version 0.92 (12/7/24) Change List:\
 -- Now doing incremental updates to the NN accumulator during make/unmake move\
 -- Now compiling with clang (within MSVC IDE)\
