@@ -38,6 +38,7 @@
     <ProjectGuid>{295FA678-A2D8-42EF-A280-A54491D30392}</ProjectGuid>
     <RootNamespace>Myrddin</RootNamespace>
     <Keyword>Win32Proj</Keyword>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -58,7 +59,9 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -73,7 +76,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>ClangCL</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='64-bit Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -200,6 +203,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
     <Link>
       <AdditionalOptions>/fixed:no %(AdditionalOptions)</AdditionalOptions>
@@ -237,8 +241,8 @@
       <DataExecutionPrevention>
       </DataExecutionPrevention>
       <GenerateMapFile>true</GenerateMapFile>
-      <StackReserveSize>10000000</StackReserveSize>
-      <StackCommitSize>10000000</StackCommitSize>
+      <StackReserveSize>10485760</StackReserveSize>
+      <StackCommitSize>10485760</StackCommitSize>
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
@@ -345,7 +349,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAs>CompileAsCpp</CompileAs>
-      <AdditionalIncludeDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -353,11 +356,17 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <FloatingPointExceptions>false</FloatingPointExceptions>
-      <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
-      <LanguageStandard_C>Default</LanguageStandard_C>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
+      <LanguageStandard_C>stdc17</LanguageStandard_C>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <StructMemberAlignment>Default</StructMemberAlignment>
       <CallingConvention>Cdecl</CallingConvention>
+      <OmitFramePointers>true</OmitFramePointers>
+      <EnableFiberSafeOptimizations>false</EnableFiberSafeOptimizations>
+      <LanguageStandard>Default</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>-mavx -mavx2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression;C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <OutputFile>$(OutDir)Myrddin.exe</OutputFile>
@@ -374,40 +383,42 @@
       <AdditionalDependencies>kernel32.lib;user32.lib;%(AdditionalDependencies);gtb.lib;lbfgs.lib</AdditionalDependencies>
       <IgnoreSpecificDefaultLibraries>
       </IgnoreSpecificDefaultLibraries>
-      <AdditionalLibraryDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb\lib\Release;C:\Users\John\Documents\Visual Studio Projects\liblbfgs-1.10\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <StackReserveSize>10485760</StackReserveSize>
-      <StackCommitSize>10485760</StackCommitSize>
+      <AdditionalLibraryDirectories>C:\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb\lib\Release;C:\Users\johnv\OneDrive\Documents\Visual Studio Projects\liblbfgs-1.10\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <Profile>true</Profile>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <TargetMachine>MachineX64</TargetMachine>
+      <StackCommitSize>10485760</StackCommitSize>
+      <StackReserveSize>10485760</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman\hzip.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf_c.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf_d.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Alloc.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Bra86.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzFind.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Dec.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Enc.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaDec.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaEnc.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\wrap.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\adler32.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\crc32.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\deflate.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\infback.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inffast.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inflate.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inftrees.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\trees.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\uncompr.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zcompress.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zutil.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-att.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-dec.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-probe.c" />
-    <ClCompile Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport\sysport.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman\hzip.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf_c.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf_d.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Alloc.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Bra86.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzFind.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Dec.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Enc.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaDec.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaEnc.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\wrap.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\adler32.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\crc32.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\deflate.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\infback.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inffast.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inflate.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inftrees.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\trees.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\uncompr.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zcompress.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zutil.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-att.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-dec.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-probe.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport\sysport.c" />
+    <ClCompile Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\tbprobe.c" />
     <ClCompile Include="BBEval.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
     </ClCompile>
@@ -423,9 +434,7 @@
     <ClCompile Include="book.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsC</CompileAs>
     </ClCompile>
-    <ClCompile Include="cerebrum.c">
-      <CallingConvention Condition="'$(Configuration)|$(Platform)'=='64-bit Release|x64'">Cdecl</CallingConvention>
-    </ClCompile>
+    <ClCompile Include="cerebrum 2-0.c" />
     <ClCompile Include="FEN.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
     </ClCompile>
@@ -438,15 +447,44 @@
     <ClCompile Include="Myrddin.cpp">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
     </ClCompile>
-    <ClCompile Include="TBProbe.cpp">
-      <CompileAs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">CompileAsCpp</CompileAs>
-    </ClCompile>
+    <ClCompile Include="TBProbe.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="PArray.inc" />
     <None Include="VTune\Myrddin.vpj" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman\hzip.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzfP.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Alloc.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Bra.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzFind.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzFindMt.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzHash.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Dec.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Lzma86Enc.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaDec.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\LzmaEnc.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\lzma\Types.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\wrap.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\crc32.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\deflate.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inffast.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inffixed.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inflate.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\inftrees.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\trees.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zconf.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zconf.in.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zlib.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\zlib\zutil.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-att.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-dec.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-probe.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-types.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport\sysport.h" />
+    <ClInclude Include="..\..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\version.h" />
     <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\huffman\hzip.h" />
     <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzf.h" />
     <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\compression\liblzf\lzfP.h" />
@@ -477,6 +515,7 @@
     <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-probe.h" />
     <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\gtb-types.h" />
     <ClInclude Include="..\..\..\..\..\ChessEng\gaviota-win32-v0.74.41\tbprobe-0.4\sysport\sysport.h" />
+    <ClInclude Include="cerebrum 1-1.h" />
     <ClInclude Include="lbfgs.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
