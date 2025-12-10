@@ -79,7 +79,7 @@ Version 0.94 (12/9/25) Change List:\
 -- Fixed a bug that allocated too much eval hash - eval hash memory is now allocated as an additional 15% of transposition memory\
 -- Added Late Move Pruning\
 -- Changes to LMR conditions\
--- Remove SMP support, although it may return in a future version\
+-- Removed SMP support, although it may return in a future version\
 -- Added support for "nps" command for fast self-play capability
 
 Version 0.93 (4/18/25) Change List:\
