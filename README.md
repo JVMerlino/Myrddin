@@ -1,10 +1,8 @@
-Myrddin v0.93 Release Notes -- 4/18/25
+Myrddin v0.94 Release Notes -- 12/9/25
 --------------------------------------------------------------------------------
 Myrddin is a winboard-compliant chess engine to a reasonable degree. It supports protover 1 primarily to support the Chessmaster interface, and also protover 2.
 
-Version 0.93 plays approximately 3150 ELO (CCRL) at 1 CPU, 3155 at 4 CPU against chess engines, and probably 100-200 points higher against humans. This is an improvement of approximately 50 points compared to version 0.92.
-
-**KNOWN ISSUES: Version 0.93 has a bug such that requesting more than 1GB of transposition hash memory will cause significantly worse play. This will be fixed in the next release.**
+Version 0.94 plays approximately 3175 ELO (CCRL) at 1 CPU and probably 100-200 points higher against humans. This is an improvement of approximately 70 points compared to version 0.93.
 
 The following winboard commands are supported:\
 protover\
@@ -21,6 +19,7 @@ time\
 level\
 sd\
 st\
+nps\
 hard/easy\
 memory\
 cores\
@@ -44,8 +43,8 @@ Winboard UI notes: \
 -- Post is ON by default, as opposed to the winboard protocol. This is just for debugging convenience and it appears that a lot of engines do this anyway.
 
 General Notes:\
--- Myrddin uses an "NNUE" architecture for position evaluation. The code was graciously provided by David Carteau (Orion).\
--- Myrddin's "very lazy SMP" implementation uses multiple secondary processes to fill the transposition, eval and pawn hash tables so the primary process can search deeper in the same amount of time.\
+-- Myrddin uses an "NNUE" architecture for position evaluation. The code was graciously provided by David Carteau (Orion) via the Cerebrum library.\
+-- Myrddin's "very lazy SMP" implementation uses multiple secondary processes to fill the transposition, eval and pawn hash tables so the primary process can search deeper in the same amount of time. SMP SUPPORT IS DISABLED IN v0.94. It may return in a future version.
 -- Myrddin uses Pradu Kannan's "magicmoves" code for move generation of sliding pieces.\
 -- Search is basic alpha/beta, with reasonable and generally conservative extensions and reductions.\
 -- Max search depth is 128. \
@@ -75,6 +74,13 @@ Myrddin chess engine written by John Merlino, with lots of inspiration, assistan
 
 Version List
 ---------------
+Version 0.94 (12/9/25) Change List:\
+-- Integrated Cerebrum NN library 2.0\
+-- Fixed a bug that allocated too much eval hash - eval hash memory is now allocated as an additional 15% of transposition memory\
+-- Added Late Move Pruning\
+-- Changes to LMR conditions\
+-- Added support for "nps" command for fast self-play capability\
+
 Version 0.93 (4/18/25) Change List:\
 -- Now using IIR instead of IID\
 -- Minor adjustments to LMR conditions\
