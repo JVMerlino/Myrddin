@@ -58,21 +58,14 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #define USE_FUTILITY_PRUNING	TRUE
 #define USE_MATE_DISTANCE_PRUNING   TRUE
-#define USE_LMP				FALSE
+#define USE_LMP				TRUE
 
 #define USE_SEE				TRUE	
 #define USE_SEE_MOVE_ORDER	FALSE	// not helpful
 
-#define USE_SMP				TRUE
-#if USE_SMP
-#define DEBUG_SMP			FALSE	// adds lots of logging!
-#endif
-
 #define USE_INCREMENTAL_ACC_UPDATE TRUE
 
-#define USE_CEREBRUM_1_0	TRUE
-
-#define USE_EGTB			TRUE
+#define USE_CEREBRUM_1_0	FALSE	
 
 #define TIME_BANK			500	// milliseconds clock to keep as a buffer
 #ifdef _DEBUG
@@ -80,6 +73,23 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define assert(x)                // uncomment this if profiling!
 #else
 #define VERIFY_BOARD        FALSE
+#endif
+
+#define USE_OPENING_BOOK	TRUE
+
+#define DO_SELF_PLAY		FALSE	
+
+#if DO_SELF_PLAY
+#define SELF_PLAY_RANDOM_MOVES	8
+#define USE_EGTB			FALSE
+#define USE_SMP				FALSE
+#else
+#define USE_EGTB			TRUE
+#define USE_SMP				FALSE
+#endif
+
+#if USE_SMP
+#define DEBUG_SMP			FALSE	// adds lots of logging!
 #endif
 
 #define SHOW_QS_NODES       FALSE
@@ -101,7 +111,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #define CLOCK_TO_USE		40		// divide remaining clock by this number to get base thinking time
 #define PANIC_CLOCK_TO_USE	40		// divide remaining clock by this number when we have less than PANIC_THRESHHOLD time remaining
-#define PANIC_THRESHHOLD	10000	// ten seconds left!
+#define PANIC_THRESHHOLD	5000	// two seconds left!
 
 ////////////////////////////////////////////////////////////////////////////////
 typedef unsigned char   ColorType;
@@ -234,8 +244,8 @@ typedef struct
 
 extern int			nCPUs;
 extern HANDLE		hSharedMem, hSharedHash;
-extern char			szSharedMemName[32];
-extern char			szSharedHashName[32];
+extern char			szSharedMemName[128];
+extern char			szSharedHashName[128];
 extern SHARED_MEM	*smSharedMem;
 extern SHARED_HASH  *shSharedHash;
 
@@ -261,7 +271,7 @@ extern int		nEGTBCompressionType;
 extern char     szEGTBPath[MAX_PATH];
 
 extern PosSignature	dwInitialPosSignature;
-extern BOOL			bLog, bExactThinkTime, bExactThinkDepth;
+extern BOOL			bLog, bExactThinkTime, bExactThinkDepth, bExactThinkNodes;
 extern int			nEngineMode, nEngineCommand;
 extern unsigned int	nGameMove, nFifty;
 extern int			nCompSide;
@@ -270,7 +280,7 @@ extern unsigned int	nFischerInc, nMovesBeforeControl;
 extern unsigned int nThinkTime, nPonderTime;
 extern ULONGLONG    nThinkStart;
 extern int			nClockRemaining;
-extern unsigned int nCheckNodes;	// number of nodes to search before checking time management
+extern unsigned int nCheckNodes, nThinkNodes;	// number of nodes to search before checking time management
 extern CHESSMOVE	cmChosenMove, cmPonderMove;
 extern FILE		   *logfile;
 

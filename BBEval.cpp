@@ -25,7 +25,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #if USE_CEREBRUM_1_0
 #include "cerebrum 1-0.h"
 #else
-#include "cerebrum 1-1.h"
+#include "cerebrum 2-0.h"
 #endif
 
 #if USE_EGTB
@@ -33,8 +33,6 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #endif
 
 int		nEval;
-
-#define NN_TO_CP	1000		// multiplication factor to convert NN return value to centipawns - this is David's suggested value
 
 /*========================================================================
 ** Evaluate - assign a "goodness" score to the current position on the
@@ -55,7 +53,9 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
 	}
 #endif
 
+#if USE_EGTB
     if (!tb_available)  // if tablebases are not available, check for material draw
+#endif
     {
         int nTotalPieces = BitCount(EvalBoard->bbOccupancy);
 
@@ -110,7 +110,7 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
 	nn_update_all_pieces(EvalBoard->Accumulator, EvalBoard->bbPieces);
 #endif
 
-	nEval = (int)(nn_evaluate(EvalBoard->Accumulator, EvalBoard->sidetomove) * NN_TO_CP);
+	nEval = nn_evaluate(EvalBoard->Accumulator, EvalBoard->sidetomove);
 
 exit:
 #if USE_EVAL_HASH

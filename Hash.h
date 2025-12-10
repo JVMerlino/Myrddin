@@ -30,7 +30,7 @@ typedef struct
 
 typedef union {
 	hash_item h;
-	long long  l[2];
+//	long long  l[2];
 } HASH_ENTRY;
 
 typedef struct
@@ -49,6 +49,7 @@ typedef struct
 #define HASH_MATE_THREAT	(0x01)
 
 extern size_t	dwHashSize;
+extern size_t	dwEvalHashSize;
 
 HASH_ENTRY *InitHash(void);
 void		ClearHash(void);

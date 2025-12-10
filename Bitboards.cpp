@@ -25,7 +25,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #if USE_CEREBRUM_1_0
 #include "cerebrum.h"
 #else
-#include "cerebrum 1-1.h"
+#include "cerebrum 2-0.h"
 #endif
 
 extern NN_Accumulator accumulator;

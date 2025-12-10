@@ -18,6 +18,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #include <sys/types.h>
 #include <sys/timeb.h>
+#include <iostream>
 
 #include "Myrddin.h"
 #include "Bitboards.h"
@@ -32,8 +33,8 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 HASH_ENTRY		*HashTable = NULL;
 EVAL_HASH_ENTRY *EvalHashTable = NULL;
 
-size_t	dwHashSize = DEFAULT_HASH_SIZE; // results in 128MB of hash
-size_t	dwEvalHashSize = 0x2000000;		// results in 32MB of eval hash
+size_t	dwHashSize = DEFAULT_HASH_SIZE;	// this is the number of entries, not the actual memory size
+size_t	dwEvalHashSize = DEFAULT_HASH_SIZE * 2;	// ditto here
 
 // short	nHashAge = 0;
 
@@ -95,6 +96,12 @@ void SaveHash(CHESSMOVE *cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, P
     PosSignature	index = dwSignature & (dwHashSize - 1);
     HASH_ENTRY		*pEntry = HashTable + index;
 
+#if USE_SMP
+	if ((pEntry->h.nDepth <= nDepth) || (nCPUs == 1)/* || pEntry->h.dwSignature == dwSignature */)
+		goto Replace;
+	else
+		return;
+#else
 #if ALWAYS_REPLACE
     goto Replace;
 #else
@@ -103,6 +110,7 @@ void SaveHash(CHESSMOVE *cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, P
         goto Replace;
 	else
 		return;
+#endif
 
 #if 0
     // stored hash entry is exact (but is for a different position)
@@ -147,7 +155,7 @@ Replace:
             nEval -= nPly;
     }
 
-    HASH_ENTRY e;
+//   HASH_ENTRY e;
 
 #if USE_INTERLOCKED
     _InterlockedExchange64((volatile LONG64 *)&pEntry->h.dwSignature, dwSignature); // 8 byte atomic assignment of signature
@@ -155,22 +163,22 @@ Replace:
 	pEntry->h.dwSignature = dwSignature;
 #endif
 
-    e.h.nDepth = (BYTE)nDepth;
-    e.h.nEval = (short)nEval;
-    e.h.nFlags = nFlags;
+    pEntry->h.nDepth = (BYTE)nDepth;
+	pEntry->h.nEval = (short)nEval;
+	pEntry->h.nFlags = nFlags;
     if (cmMove)
     {
-        e.h.moveflag = cmMove->moveflag;
-        e.h.from = cmMove->fsquare;
-        e.h.to = cmMove->tsquare;
+		pEntry->h.moveflag = cmMove->moveflag;
+		pEntry->h.from = cmMove->fsquare;
+		pEntry->h.to = cmMove->tsquare;
     }
     else
-        e.h.from = NO_SQUARE;
+		pEntry->h.from = NO_SQUARE;
 
 #if USE_INTERLOCKED
     _InterlockedExchange64((volatile LONG64 *)&pEntry->l[1] , e.l[1]); // 8 byte atomic assignment of all hash items except signature
 #else
-	pEntry->l[1] = e.l[1];
+//	pEntry->l[1] = e.l[1];
 #endif
 }
 
@@ -299,14 +307,15 @@ HASH_ENTRY* InitHash(void)
 	_timeb tb;
 
 	_ftime(&tb);
+	srand(tb.time);
 	if (!bSlave)
     {
 		// create shared memory for slave processes (even if they're aren't any, because of the "cores" command)
 		hilo h={0};
    		h.b = dwHashSize * sizeof (HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY);
 
-		sprintf(szSharedHashName, "MSH-%lld-%d", (long long)tb.time, tb.millitm);
-		sprintf(szSharedMemName, "MSM-%lld-%d", (long long)tb.time, tb.millitm);
+		sprintf(szSharedHashName, "MSH-%lld-%d-08X", (long long)tb.time, tb.millitm, GetCurrentProcessId());
+		sprintf(szSharedMemName, "MSM-%lld-%d-08X", (long long)tb.time, tb.millitm, GetCurrentProcessId());
 		hSharedHash = CreateFileMapping(
 							INVALID_HANDLE_VALUE,    // use paging file
 							NULL,                    // default security
@@ -330,6 +339,12 @@ HASH_ENTRY* InitHash(void)
 			if (HashTable)
 				ClearHash();
 		}
+		else
+		{
+			printf("Unable to create hSharedHash - %d\n", (int)GetLastError());
+			fflush(stdout);
+			return(NULL);
+		}
 
 		hSharedMem = CreateFileMapping(
 							INVALID_HANDLE_VALUE,    // use paging file
@@ -351,6 +366,12 @@ HASH_ENTRY* InitHash(void)
 			if (smSharedMem != NULL)
 				printf("Master says Shared Mem = %08X\n", &smSharedMem);
 #endif
+		}
+		else
+		{
+			printf("Unable to create hSharedMem - %d\n", (int)GetLastError());
+			fflush(stdout);
+			return(NULL);
 		}
     }
     else if (bSlave)

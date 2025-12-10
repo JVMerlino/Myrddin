@@ -32,16 +32,14 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 // The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// Now using IIR instead of IID
-// Minor adjutments to LMR conditions
-// Now supporting the xboard "memory" command (requested by Martin Sedlak)
-// Increased the maximum number of SMP processes to 32 (requested by Lars Hallerstrom)
-// Fixed a bug in pondering introduced in v0.90. Myrddin would restart thinking at depth 1 even if the expected ponder move was made by the opponent.
-// Fixed a rare bug that could cause Myrddin to crash when using logfiles
-// Found a bug that caused the Eval hash size to be 2MB instead of 32MB.
-// Default Transposition hash size is now 256MB
+// Integrated Cerebrum NN library 2.0
+// Added Late Move Pruning
+// Changes to LMR conditions
+// Added support for "nps" command for fast self-play capability
+// Fixed a bug that allocated too much eval hash - eval hash memory is now allocated as an additional 15% of transposition memory
 //
 // TODO -- in no particular order
+// Use IIR on pv nodes?
 
 #include <conio.h>
 #include <signal.h>
@@ -61,7 +59,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #if USE_CEREBRUM_1_0
 #include "cerebrum.h"
 #else
-#include "cerebrum 1-1.h"
+#include "cerebrum 2-0.h"
 #endif
 
 #if USE_EGTB
@@ -69,8 +67,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include "gtb-probe.h"
 #endif
 
-char	szVersion[16] = "Myrddin 0.93";
-char	szInfo[32] = "4/18/25";
+char	szVersion[16] = "Myrddin 0.94";
+char	szInfo[32] = "12/9/25";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
@@ -94,11 +92,11 @@ int				nDepth, nThinkDepth, nPrevPVEval;
 int				nCompSide;
 unsigned int	nThinkTime, nPonderTime, nFischerInc, nLevelMoves, nMovesBeforeControl;
 int				nClockRemaining;	// needs to be signed because it can be temporarily negative when calculating time to think
-unsigned int	nCheckNodes;
+unsigned int	nCheckNodes, nThinkNodes;
 CHESSMOVE		cmChosenMove, cmPonderMove;
 BB_BOARD		bbPonderRestore;
 ULONGLONG		nThinkStart;
-BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth;
+BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth, bExactThinkNodes;
 int				nEngineMode, nEngineCommand;
 PosSignature	dwInitialPosSignature;
 FILE		   *logfile;
@@ -109,7 +107,7 @@ int				nSlaveNum = -1;
 
 #if USE_SMP
 char			szProgName[MAX_PATH];
-char			szSharedMemName[32], szSharedHashName[32];
+char			szSharedMemName[128], szSharedHashName[128];
 HANDLE			hSharedMem = NULL;
 HANDLE			hSharedHash = NULL;
 SHARED_HASH		*shSharedHash;
@@ -181,26 +179,20 @@ void ZeroSlaveNodes(void)
 ** SetHashSize - set the hash size based on ini file setting or GUI command
 **========================================================================
 */
-void SetHashSize(int size)
+void SetHashSize(unsigned int size)	// size in MB
 {
-	BOOL	bPowerOf2;
+	if (size == 0)
+		size = 2;
 
-	bPowerOf2 = !(size & (size - 1)) && size;	// thanks to http://graphics.stanford.edu/~seander/bithacks.html
+	// Shift highest bit down
+	unsigned int p = 1U << (sizeof(size) * CHAR_BIT - 1);
+	while (p > size)
+		p >>= 1;
 
-	if (!bPowerOf2)
-	{
-		size >>= 1;		// round DOWN!
-		size--;
-		size |= size >> 1;
-		size |= size >> 2;
-		size |= size >> 4;
-		size |= size >> 8;
-		size |= size >> 16;
-		size++;
-	}
-
-	dwHashSize = (size << 20);	// multiply by 1MB
-	dwHashSize >>= 4;	// divide by size of hash entry (rounding up to power of 2)
+	// this distribution of the memory allocation will result in about 15% more memory than requested - no big deal
+	dwHashSize = p << 15;	// number of entries in transposition table
+	dwEvalHashSize = dwHashSize * 2;	// number of entries in eval table
+//	printf("size = %d, dwHashSize = %08X, %ld, dwEvalHashSize = %08X, %ld\n", size, dwHashSize, dwHashSize * sizeof(HASH_ENTRY), dwEvalHashSize, dwEvalHashSize * sizeof(EVAL_HASH_ENTRY));
 }
 
 /*========================================================================
@@ -438,7 +430,7 @@ BOOL	CheckForInput(BOOL bWaitForInput)
             return(FALSE);
     }
 
-    if (!fgets(line, 256, stdin))
+    if (!fgets(line, sizeof(line), stdin))
         return(-1);	// shouldn't ever happen
 
     if (line[0] == '\n')
@@ -584,7 +576,11 @@ void bbNewGame(BB_BOARD *bbBoard)
     ZeroMemory(cmGameMoveList, sizeof(cmGameMoveList));
     nGameMove = 0;
 
+#if USE_OPENING_BOOK
     bInBook = TRUE;
+#else
+	bInBook = FALSE;
+#endif
     bComputer = FALSE;
 
     if (bKibitz)
@@ -673,7 +669,7 @@ void	HandleCommand(void)
         {
             printf("feature done=0\n");
             printf("feature setboard=1 playother=1 draw=0\n");
-            printf("feature sigint=0 sigterm=0 reuse=0 analyze=1\n");
+            printf("feature sigint=0 sigterm=0 reuse=0 analyze=1 memory=1 nps=1\n");
 			printf("feature variants=normal\n");
 			printf("feature myname=\"%s\"\n", szVersion);
 			printf("feature done=1\n");
@@ -974,7 +970,7 @@ void	HandleCommand(void)
 			nResult = GaviotaTBProbe(&bbBoard, FALSE);
         else
 #endif
-			nResult = BBEvaluate(&bbBoard, -CHECKMATE-1, CHECKMATE+1);
+			nResult = BBEvaluate(&bbBoard, -MAX_WINDOW, MAX_WINDOW);
 
         printf("score = %d\n", nResult);
 
@@ -1278,6 +1274,7 @@ void	HandleCommand(void)
 			return;
 #endif
         sscanf(line, "st %d", &nThinkTime);
+		bExactThinkNodes = FALSE;
         bExactThinkTime = TRUE;
         bExactThinkDepth = FALSE;
         nCheckNodes = 0xFFFF;
@@ -1288,14 +1285,34 @@ void	HandleCommand(void)
         return;
     }
 
-    if (!strcmp(command, "sd"))
+	if (!strcmp(command, "nps"))
+	{
+#if USE_SMP
+		if (bSlave)
+			return;
+#endif
+		sscanf(line, "nps %d", &nThinkNodes);
+		nThinkNodes *= nThinkTime;
+		bExactThinkNodes = TRUE;
+		bExactThinkTime = FALSE;
+		bExactThinkDepth = FALSE;
+		nCheckNodes = 0x3FF;	// check every 1K nodes, as usually this command is only given when requesting a very small number of nodes before making a move
+
+		if (bLog)
+			fprintf(logfile, "< Finished nps\n");
+		PromptForInput();
+		return;
+	}
+
+	if (!strcmp(command, "sd"))
     {
 #if USE_SMP
 		if (bSlave)
 			return;
 #endif
         sscanf(line, "sd %d", &nThinkDepth);
-        bExactThinkDepth = TRUE;
+		bExactThinkNodes = FALSE;
+		bExactThinkDepth = TRUE;
         bExactThinkTime = FALSE;
         nCheckNodes = 0xFFFF;
 
@@ -1712,7 +1729,7 @@ void	HandleCommand(void)
                 nPonderTime = (unsigned int)(GetTickCount64() - nThinkStart);
 
                 nEngineMode = ENGINE_THINKING;
-
+#if USE_OPENING_BOOK
                 // now check to see if there is a book move
                 BBBoardToForsythe(&bbBoard, 0, EPD);
                 FIND_OPENING();
@@ -1721,6 +1738,10 @@ void	HandleCommand(void)
                     nEngineCommand = STOP_THINKING;
                     bInBook = TRUE;
                 }
+#else
+				nEngineCommand = STOP_THINKING;
+				bInBook = FALSE;
+#endif
             }
             else
             {
@@ -1932,16 +1953,19 @@ int main(void)
 #endif
 #endif
     ParseIniFile();
+	
+	_timeb  tb;
+	_ftime(&tb);
+
+	srand((unsigned int)GetCurrentProcessId() + tb.millitm);
 
 	atexit(cleanup);
 
     if (bLog)
     {
         char	fn[128];
-		_timeb  tb;
 
         _mkdir("logs");
-		_ftime(&tb);
 		sprintf(fn, "logs\\Myrddin-%lld-%d-%s%d.log", (long long) tb.time, tb.millitm, (bSlave ? "slave" : ""), nSlaveNum+1);
         logfile = fopen(fn, "w+");
 
@@ -1983,6 +2007,7 @@ int main(void)
     {
         printf("Unable to allocate hash table...exiting\n");
 		fprintf(logfile, "Unable to allocate hash table...exiting\n");
+		fflush(logfile);
         return(0);
     }
 #endif
@@ -2005,8 +2030,10 @@ int main(void)
 		return(0);
 	}
 
+#if USE_OPENING_BOOK
 	if (!bSlave)
 	    INITIALIZE();	// prodeo book
+#endif
 
 #if USE_EGTB
 	if (GaviotaTBInit() == EXIT_FAILURE)
@@ -2063,7 +2090,7 @@ int main(void)
             int  	nEval;
 
             // time to choose a move
-
+#if USE_OPENING_BOOK
             // get book move?
             *FROM = '\0';
 
@@ -2073,7 +2100,11 @@ int main(void)
                 BBBoardToForsythe(&bbBoard, 0, EPD);
                 FIND_OPENING();
             }
+#if DO_SELF_PLAY
+			if ((nGameMove < SELF_PLAY_RANDOM_MOVES) || *FROM)
+#else
             if (*FROM)	// we've got a book move
+#endif
             {
                 CHESSMOVE	cmTempMoveList[MAX_LEGAL_MOVES];
                 char		bookString[8];
@@ -2084,13 +2115,19 @@ int main(void)
                 sprintf(bookString, "%s%s", strlwr(FROM), strlwr(TO));
 
                 BBGenerateAllMoves(&bbBoard, cmTempMoveList, &nNumMoves, FALSE);
-
+#if DO_SELF_PLAY
+				int random_move = (rand() % nNumMoves);
+#endif
                 // find the book move in the list of legal moves
                 for (n = 0; n < nNumMoves; n++)
                 {
                     MoveToString(moveString, &cmTempMoveList[n], FALSE);
 
+#if DO_SELF_PLAY
+					if ((n == random_move) && (nGameMove < SELF_PLAY_RANDOM_MOVES))
+#else
                     if (!strnicmp(moveString, bookString, strlen(moveString)))	// we've found our move
+#endif
                     {
 						cmChosenMove = cmTempMoveList[n];
 
@@ -2118,6 +2155,7 @@ int main(void)
                 }
             }
             else	// no book move, time to think
+#endif	// USE_OPENING_BOOK
             {
                 CHESSMOVE	cmTempMoveList[MAX_LEGAL_MOVES];
                 WORD		nNumMoves;
@@ -2166,10 +2204,10 @@ int main(void)
                 // iterative depth loop
                 do
                 {
-#if 0 // USE_SMP
+#if 1 // USE_SMP
                     if (bSlave)
                     {
-                        if (nSlaveNum & 1)
+                        if ((nSlaveNum+1) & 1)
                             nEval = Think(nDepth + 1);
                         else
                             nEval = Think(nDepth);
@@ -2247,7 +2285,7 @@ int main(void)
 
                     nDepth++;
 
-#if 1 // USE_SMP         // more aggressive depth adjustment for some child processes
+#if 0 // USE_SMP         // more aggressive depth adjustment for some child processes
                     if (bSlave)
                     {
                         if ((nSlaveNum & 1) == 0)

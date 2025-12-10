@@ -38,7 +38,7 @@ typedef uint64_t Bitboard;
 #if USE_CEREBRUM_1_0
 #include "cerebrum 1-0.h"
 #else
-#include "cerebrum 1-1.h"
+#include "cerebrum 2-0.h"
 #endif
 
 enum SQUARES {

@@ -84,7 +84,7 @@ static int	cmHistory[64][64];
 ** the current board position
 **========================================================================
 */
-unsigned long long	doBBPerft(int depth, BB_BOARD* Board, BOOL bDivide)
+unsigned long long doBBPerft(int depth, BB_BOARD* Board, BOOL bDivide)
 {
 	int			nMove;
 	unsigned long long nodes = 0;
@@ -144,7 +144,7 @@ unsigned long long	doBBPerft(int depth, BB_BOARD* Board, BOOL bDivide)
 ** ever occurred in the game
 **========================================================================
 */
-static BOOL EvalPositionRepeated(PosSignature dwSignature)
+static inline BOOL EvalPositionRepeated(PosSignature dwSignature)
 {
 	int	n;
 
@@ -165,7 +165,7 @@ static BOOL EvalPositionRepeated(PosSignature dwSignature)
 ** move, tell the engine to end thinking and pick a move by returning FALSE
 **========================================================================
 */
-static BOOL CheckTimeRemaining(void)
+static inline BOOL CheckTimeRemaining(void)
 {
 #if USE_SMP
 	if (bSlave)
@@ -173,21 +173,25 @@ static BOOL CheckTimeRemaining(void)
 #endif
 
 	BOOL		    bTimeRemaining;
-	unsigned int	nTimeUsed;
 	int			    nEvalDip;
 
 	if ((nEngineMode == ENGINE_ANALYZING) || (nEngineMode == ENGINE_PONDERING))
 		return(TRUE);
 
-	nTimeUsed = GetTickCount64() - nThinkStart - nPonderTime;
+	ULONGLONG gtc = GetTickCount64();
+
+	ULONGLONG nTimeUsed = gtc - nThinkStart - nPonderTime;
 
 	if (bExactThinkTime)
 	{
-		if ((GetTickCount64() - nThinkStart) >= nThinkTime * 1000)
+		if ((gtc - nThinkStart) >= (ULONGLONG)(nThinkTime * 1000))
 			return(FALSE);
 		else
 			return(TRUE);
 	}
+
+	if (bExactThinkNodes)
+		return(nThinkNodes > nSearchNodes);
 
 	if (bExactThinkDepth)
 		return(TRUE);
@@ -271,7 +275,7 @@ static BOOL CheckTimeRemaining(void)
 ** GetNextMove - finds the move with the highest score in the move list
 **========================================================================
 */
-static CHESSMOVE* GetNextMove(CHESSMOVE* MoveList, int nNumMoves)
+static inline CHESSMOVE* GetNextMove(CHESSMOVE* MoveList, int nNumMoves)
 {
 	int			n, nBest;
 	long 		nBestScore;
@@ -306,7 +310,7 @@ static CHESSMOVE* GetNextMove(CHESSMOVE* MoveList, int nNumMoves)
 ** heuristics
 **========================================================================
 */
-static void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves)
+static inline void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves)
 {
 	int	n;
 	CHESSMOVE cmMove;
@@ -321,7 +325,7 @@ static void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves)
 
 #if USE_SEE_MOVE_ORDER
 		if (cmMove.moveflag & MOVE_CAPTURE)
-			cmMove.nScore += BBSEEMove(&cmMove, nSideToMove);
+			cmMove.nScore = MoveList[n].nScore += BBSEEMove(&cmMove, nSideToMove);
 #endif
 
 #if USE_KILLERS
@@ -374,7 +378,7 @@ static void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves)
 ** UpdateKiller - add a killer move to the killer list
 **========================================================================
 */
-static void UpdateKiller(int nPly, CHESSMOVE* cmKiller, int nEval)
+static inline void UpdateKiller(int nPly, CHESSMOVE* cmKiller, int nEval)
 {
 	// check to see if the move is already in the list
 	if ((cmKiller->fsquare == cmKillers[nPly][0].cmKiller.fsquare) && (cmKiller->tsquare == cmKillers[nPly][0].cmKiller.tsquare))
@@ -469,7 +473,7 @@ void ClearHistory(void)
 ** IsNullOk -- check to see if it's ok to use null move
 **========================================================================
 */
-static BOOL	BBIsNullOk(void)
+static inline BOOL BBIsNullOk(void)
 {
 	// null move is ok if the side to move has any pieces left
 	if (bbEvalBoard.sidetomove == WHITE)
@@ -494,7 +498,7 @@ static BOOL	BBIsNullOk(void)
 ** piece, using lowest valued pieces first
 **========================================================================
 */
-static int BBSEE(SquareType sqTarget, int captured, int ctSide)
+static inline int BBSEE(SquareType sqTarget, int captured, int ctSide)
 {
 	int			sqFrom;
 	int			val, seeVal, piece;
@@ -504,7 +508,7 @@ static int BBSEE(SquareType sqTarget, int captured, int ctSide)
 	if (attackers == BB_EMPTY)
 		return(0);
 
-	seeVal = val = 0;  // default value
+	val = 0;  // default value
 
 	sqFrom = NO_SQUARE;
 	for (piece = PAWN; piece >= KING; piece--)	// no Kings in SEE?
@@ -658,6 +662,81 @@ static int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 	}
 #endif
 
+#if USE_HASH_IN_QS
+	// probe the hash table
+	int			nHashFlags = 0;
+	BYTE		nHashType = HASH_ALPHA;
+	HASH_ENTRY* heHash = ProbeHash(bbEvalBoard.signature);
+
+	if ((heHash != NULL) && (nEngineMode == ENGINE_PONDERING ? nEvalPly >= 3 : nEvalPly >= 2))
+	{
+#if FULL_LOG
+		if (nEvalPly == 0)
+		{
+			fprintf(logfile, "Got Hash Entry at eval ply %d -- nEval %d, from 0x%02X, to 0x%02X, flags %08X\n",
+				nEvalPly, heHash->h.nEval, heHash->h.from, heHash->h.to, heHash->h.nFlags);
+			fflush(logfile);
+		}
+#endif
+		nHashFlags = heHash->h.nFlags;
+
+//		if (heHash->h.nDepth >= nDepth)
+		{
+			int nHashEval = heHash->h.nEval;
+
+			if (nHashEval >= (CHECKMATE / 2))
+				nHashEval -= nEvalPly;
+			else if (nHashEval < -(CHECKMATE / 2))
+				nHashEval += nEvalPly;
+
+			if (nHashFlags & HASH_EXACT)
+			{
+#if FULL_LOG
+				if (bLog)
+					nHashReturns++;
+				if (nEvalPly == 0)
+				{
+					fprintf(logfile, "Returning Hash Exact\n");
+					fflush(logfile);
+				}
+#endif
+				if (nHashEval >= nBeta)
+					return(nBeta);
+				if (nHashEval <= nAlpha)
+					return(nAlpha);
+				return nHashEval;
+			}
+
+			if ((nHashFlags & HASH_ALPHA) && (nHashEval <= nAlpha))
+			{
+#if FULL_LOG
+				if (bLog)
+					nHashReturns++;
+				if (nEvalPly == 0)
+				{
+					fprintf(logfile, "Returning Hash Alpha\n");
+					fflush(logfile);
+				}
+#endif
+				return nAlpha;
+			}
+			else if ((nHashFlags & HASH_BETA) && (nHashEval >= nBeta))
+			{
+#if FULL_LOG
+				if (bLog)
+					nHashReturns++;
+				if (nEvalPly == 0)
+				{
+					fprintf(logfile, "Returning Hash Beta\n");
+					fflush(logfile);
+				}
+#endif
+				return nBeta;
+			}
+		}
+	}
+#endif // USE_HASH_IN_QS
+
 	nStandPat = BBEvaluate(&bbEvalBoard, nAlpha, nBeta);
 
 	if (nEvalPly >= MAX_DEPTH)
@@ -688,8 +767,6 @@ static int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 	}
 
 	//  ScoreMoves(&cmEvalMoveList[0], nNumMoves);	// not necessary unless ScoreMoves() changes!
-
-	nEval = nStandPat;
 
 	for (n = 0; n < nNumLegalMoves; n++)
 	{
@@ -879,8 +956,6 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		}
 	}
 
-	BOOL bPVNode = (nBeta - nAlpha) > 1;
-
 #if USE_EGTB
 	// Probe Gaviota EGTBs
 	if (nEvalPly && tb_available && (BitCount(bbEvalBoard.bbOccupancy) <= 5))
@@ -926,13 +1001,15 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 	}
 #endif
 
+	BOOL bPVNode = (nBeta - nAlpha) > 1;
+
 #if USE_HASH
 	// probe the hash table
 	int			nHashFlags = 0;
 	BYTE		nHashType = HASH_ALPHA;
 	HASH_ENTRY* heHash = ProbeHash(bbSig);
 
-	if (heHash && !bPVNode && (nEngineMode == ENGINE_PONDERING ? nEvalPly >= 3 : nEvalPly >= 2))
+	if ((heHash != NULL) && !bPVNode && (nEngineMode == ENGINE_PONDERING ? nEvalPly >= 3 : nEvalPly >= 2))
 	{
 #if FULL_LOG
 		if (nEvalPly == 0)
@@ -1033,6 +1110,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		int nBetaMargin[4] = { 20000, 75, 150, 275 };
 
 		nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
+
 		if (nStaticEval <= nAlpha - nAlphaMargin[nDepth])
 		{
 			nQuiesceDepth = 0;
@@ -1060,6 +1138,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		int R = 3 + (nDepth / 6);
 
 		if (
+//			nStaticEval >= nBeta || 
 			bPVNode ||
 			(nEvalPly == 0) ||
 			(nDepth <= 1) ||
@@ -1130,7 +1209,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 	BOOL	bFound = FALSE;
 
 #if USE_HASH
-	if (heHash && (heHash->h.from != NO_SQUARE))
+	if ((heHash != NULL) && (heHash->h.from != NO_SQUARE))
 	{
 		for (n = 0; n < nNumMoves; n++)
 		{
@@ -1167,7 +1246,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		{
 			if ((cmEvalMoveList[n].fsquare == cmChosenMove.fsquare) &&
 				(cmEvalMoveList[n].tsquare == cmChosenMove.tsquare)
-//				&& (cmEvalMoveList[n].moveflag == cmChosenMove.moveflag)
+				&& (cmEvalMoveList[n].moveflag == cmChosenMove.moveflag)
 				)
 			{
 				cmEvalMoveList[n].nScore += HASH_SORT_VAL;
@@ -1211,6 +1290,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 					// && (cmEvalMoveList[n].moveflag == pvIID.pv[0].moveflag)
 					)
 				{
+					// make sure that if it's a promotion, that the piece being promoted to is a match
 					if ((cmEvalMoveList[n].moveflag & MOVE_PIECEMASK) == (pvIID.pv[0].moveflag & MOVE_PIECEMASK))
 					{
 						cmEvalMoveList[n].nScore += HASH_SORT_VAL;
@@ -1227,7 +1307,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 
 #if USE_IIR
 	// Still didn't find a good move, so just reduce
-	if ((nEvalPly > 1) && !bFound && (nDepth >= 5))
+	if ((nEvalPly > 1) && !bFound && !bPVNode && (nDepth >= 4))
 		nDepth--;
 #endif
 
@@ -1272,7 +1352,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 #endif
 
 #if USE_LMP
-	BOOL bUseLMP = (!bInCheck && (nDepth < 4) && (BitCount(bbEvalBoard.bbOccupancy) > 5));	// don't prune potential winning quiet moves from tablebases
+	BOOL bUseLMP = (!bInCheck && (nDepth < 4) && !bPVNode && (BitCount(bbEvalBoard.bbOccupancy) > 5));	// don't prune potential winning quiet moves from tablebases
 #endif
 
 	// loop through legal moves
@@ -1290,16 +1370,10 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 				char	moveString[16];
 
 				fprintf(logfile, "   ");
-				fprintf(logfile, " looking at move %s -- score = %d, alpha = %d, beta = %d\n", MoveToString(moveString, &cmMove, FALSE),
-					cmMove.nScore, nAlpha, nBeta);
+				fprintf(logfile, " looking at move %s -- score = %d, alpha = %d, beta = %d\n", MoveToString(moveString, &cmMove, FALSE), cmMove.nScore, nAlpha, nBeta);
 				fflush(logfile);
 			}
 		}
-#endif
-
-#if USE_LMP
-		if (bUseLMP && ((cmMove.moveflag & MOVE_CAPTURE) == 0x0) && (nEval >= -MATE_THREAT) && (n > (5 + (nDepth * nDepth))))
-			continue;
 #endif
 
 		// get the SEE value of a capture - used by LMR
@@ -1320,13 +1394,14 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 //      int tpiece = bbEvalBoard.squares[tsquare];
 
 		if ((nEvalPly > 1)		// not at the root
-			// && !bPVNode				// not a PV node
-			&& !bInCheck			// not in check
-			// && !(cmMove.moveflag & (MOVE_PROMOTED | MOVE_CHECK | MOVE_OOO | MOVE_OO))	// not a promotion, castling or checking move
-			&& (!(cmMove.moveflag & MOVE_CAPTURE) || (nSee <= 0))    // must be either a bad capture or not a capture
-			// && (nAlpha > -MATE_THREAT)
-			// && (nDepth > 3)			// not at the leaves
-			// && (cmMove.nScore < KILLER_3_SORT_VAL)  // not a killer move
+			// && !bPVNode		// not a PV node
+			&& !bInCheck		// not in check
+			&& (n > 2)			// not one of the first three moves in the movelist
+			&& !(cmMove.moveflag & (MOVE_PROMOTED | MOVE_CHECK | MOVE_OOO | MOVE_OO))	// not a promotion, castling or checking move
+			&& (!(cmMove.moveflag & MOVE_CAPTURE) || (nSee < 0))    // must be either a bad capture or not a capture
+			// && (nAlpha > -MATE_THREAT)	// not in a mate threat against the side to move
+			&& (nDepth > 3)			// not at or near the leaves
+			&& (cmMove.nScore < KILLER_3_SORT_VAL)  // not a killer move
 			// && ((PIECEOF(tpiece) != PAWN) || !IsPassedPawn(&bbEvalBoard, tsquare, (COLOROF(tpiece) == XWHITE ? WHITE : BLACK))) // not a move by a passer
 			)
 		{
@@ -1338,15 +1413,25 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 			if (nReductions && bImproving)
 				nReductions--;
 #endif
-			if (nReductions && (cmMove.nScore >= KILLER_3_SORT_VAL) && !(cmMove.moveflag & MOVE_CAPTURE))  // reduce less for quiet killer moves
-				nReductions--;
-			if (nReductions && (cmMove.moveflag & 0x70)) // (MOVE_PROMOTED | MOVE_OOO | MOVE_OO)
-				nReductions--;
+//			if (nReductions && (cmMove.nScore >= KILLER_3_SORT_VAL) && !(cmMove.moveflag & MOVE_CAPTURE))  // reduce less for quiet killer moves
+//				nReductions--;
+//			if (nReductions && (cmMove.moveflag & 0x70)) // (MOVE_PROMOTED | MOVE_OOO | MOVE_OO)
+//				nReductions--;
 		}
 
 		// try some extension conditions - check or single reply
 		if ((cmMove.moveflag & MOVE_CHECK) || (nNumMoves == 1))
 			nReductions--;
+
+#if USE_LMP
+		if (bUseLMP && (n > (12 + (nDepth * 2))) && !(cmMove.moveflag & MOVE_CHECK) && (nEvalPly > 1) && (nReductions >= 0))
+		{
+			BBUnMakeMove(&cmMove, &bbEvalBoard, TRUE);
+			nEvalMove--;
+			nEvalPly--;
+			continue;
+		}
+#endif
 
 		if (nReductions >= nDepth)
 			nReductions = (nDepth - 1);
@@ -1357,17 +1442,19 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		else
 		{
 			nEval = -BBAlphaBeta(nDepth - 1 - nReductions, -nAlpha - 1, -nAlpha, &pv, FALSE); // reduced null window search for all other moves
+#if 1
 			if ((nEval > nAlpha) && bPVNode && (nEngineCommand != STOP_THINKING) && (nEngineCommand != END_THINKING))
 			{
 				//	memset(&pv, 0, sizeof(PV));
 				nEval = -BBAlphaBeta(nDepth - 1 - nReductions, -nBeta, -nAlpha, &pv, FALSE);   // reduced full window search if promising
 			}
+#endif
 		}
 
 		// if we did a depth reduction but improved alpha, research at proper depth
-		if (nReductions > 0)
+		if ((nEval > nAlpha) && (nReductions > 0))
 		{
-			if ((nEval > nAlpha) && ((nEngineCommand != STOP_THINKING) && (nEngineCommand != END_THINKING)))
+			if ((nEngineCommand != STOP_THINKING) && (nEngineCommand != END_THINKING))
 				nEval = -BBAlphaBeta(nDepth - 1, -nBeta, -nAlpha, &pv, FALSE);  // full-depth full window if still promising
 		}
 
@@ -1634,10 +1721,11 @@ void InitThink(void)
 	{
 		for (m = 1; m < 32; m++)    // move number
 		{
-			// listed in order of aggressiveness
+			// listed in order of aggressiveness (least to most)
 			// red = (int)(1.2 + (log(d) * log(m)) / 4.0);		// courtesy Blocky
+			// red = (int)(0.38 + log(d) * log(m) / 2.17);		// courtesy Publius
 			// red = (int)(0.32 + (log(d) * log(m)) / 2.24);	// courtesy Nawito
-			red = (int)(0.5 + (log(d) * log(m)) / 2.5);			// my own guesstimate
+			red = (int)(0.5 + (log(d) * log(m)) / 2.5);		// my own guesstimate
 			// red = (int)(1 + (log(d) * log(m)) / 2.0);		// courtesy Supernova
 			// red = (int)((0.81 * log(d)) + (1.08 * log(m)));	// courtesy Dumb
 
