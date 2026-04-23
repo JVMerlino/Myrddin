@@ -1,8 +1,8 @@
-Myrddin v0.94 Release Notes -- 12/9/25
+Myrddin v0.95 Release Notes -- 4/22/26
 --------------------------------------------------------------------------------
 Myrddin is a winboard-compliant chess engine to a reasonable degree. It supports protover 1 primarily to support the Chessmaster interface, and also protover 2.
 
-Version 0.94 plays approximately 3175 ELO (CCRL) at 1 CPU and probably 100-200 points higher against humans. This is an improvement of approximately 70 points compared to version 0.93.
+Version 0.94 plays approximately 3210 ELO (CCRL) at 1 CPU and probably 100-200 points higher against humans. This is an improvement of approximately 40 points compared to version 0.94.
 
 The following winboard commands are supported:\
 protover\
@@ -22,7 +22,7 @@ st\
 nps\
 hard/easy\
 memory\
-cores\
+cores - SMP IS NO LONGER SUPPORTED! It may return in a subsequent version.\
 result\
 undo\
 post/nopost\
@@ -55,7 +55,7 @@ General Notes:\
 –- Logfiles will be in the “logs” folder below the folder where you ran Myrddin. The output of the log is not very interesting – just PV output and communication reality-check stuff. If you are running Myrddin with multiple CPUs, there will be one logfile for each process.
 
 FULL DISCLOSURE: \
-Myrddin's Winboard interface is based on Tom Kerrigan's excellent TSCP engine, for which Tom has graciously given permission.
+Myrddin's Winboard interface was originally based on Tom Kerrigan's excellent TSCP engine, for which Tom had graciously given permission.
 
 Myrddin chess engine written by John Merlino, with lots of inspiration, assistance and patience (and perhaps some code) by:\
 –- Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's archive site)\
@@ -74,6 +74,16 @@ Myrddin chess engine written by John Merlino, with lots of inspiration, assistan
 
 Version List
 ---------------
+Version 0.95 (4/22/26) Change List:\
+-- Now using SEE for move ordering of captures, and raised castling moves higher in the move order\
+-- Now using IIR on pv nodes\
+-- More aggressive futility pruning\
+-- Added forced 16-byte alignment of transposition and eval hash structures (thanks to Jim Ablett!)\
+-- Added counter move heuristic\
+-- New network architecture of 768->1024->32->1\
+-- Fixed a bug such that fractional time increments, common in hyperbullet or testing (e.g. 0.1 second), were ignored due to truncation.	So an increment of 0.1 second per move would be set to 0.\
+-- Restored the resign feature, which somehow got deleted in v0.91
+
 Version 0.94 (12/9/25) Change List:\
 -- Integrated Cerebrum NN library 2.0\
 -- Fixed a bug that allocated too much eval hash - eval hash memory is now allocated as an additional 15% of transposition memory\
