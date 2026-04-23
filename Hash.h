@@ -16,7 +16,6 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
-#pragma pack(push,1)
 typedef struct
 {
     PosSignature	dwSignature;
@@ -31,14 +30,14 @@ typedef struct
 typedef union {
 	hash_item h;
 //	long long  l[2];
-} HASH_ENTRY;
+} HASH_ENTRY __attribute__((aligned(16)));
 
 typedef struct
 {
     PosSignature	dwSignature;
     short			nEval;
-} EVAL_HASH_ENTRY;
-#pragma pack(pop)
+	BYTE			padding[6]; // <-- ADDED: 6 bytes of padding (8+2+6 = 16 bytes)
+} EVAL_HASH_ENTRY __attribute__((aligned(16)));
 
 #define DEFAULT_HASH_SIZE		(0x1000000)	// 256MB
 
@@ -47,6 +46,8 @@ typedef struct
 #define HASH_BETA			(0x20)
 #define HASH_EXACT			(0x40)
 #define HASH_MATE_THREAT	(0x01)
+
+// #define HASH_AGE_LIMIT		4	// entries older than this many root searches are considered stale
 
 extern size_t	dwHashSize;
 extern size_t	dwEvalHashSize;

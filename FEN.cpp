@@ -108,7 +108,7 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board)
 
     search = strtok(temp_str, " ");
 
-    while (*search)
+	while (*search)
     {
         if (ISNUMBER(*search))
         {
@@ -165,7 +165,7 @@ int BBForsytheToBoard(char *forsythe_str, BB_BOARD *Board)
 					break;
             }
 
-            ++col;
+			++col;
         }
 
         ++search;

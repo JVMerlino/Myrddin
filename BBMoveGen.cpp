@@ -257,7 +257,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_F1, opp, TRUE) | (GetAttackers(Board, BB_G1, opp, TRUE))) == 0)
-                    BBAddToMoveList(legal_move_list, next_move, BB_E1, BB_G1, MOVE_OO, 0);
+                    BBAddToMoveList(legal_move_list, next_move, BB_E1, BB_G1, MOVE_OO, CASTLE_SORT_VAL);
             }
         }
 
@@ -269,7 +269,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_D1, opp, TRUE) | (GetAttackers(Board, BB_C1, opp, TRUE))) == 0)
-                    BBAddToMoveList(legal_move_list, next_move, BB_E1, BB_C1, MOVE_OOO, 0);
+                    BBAddToMoveList(legal_move_list, next_move, BB_E1, BB_C1, MOVE_OOO, CASTLE_SORT_VAL);
             }
         }
     }
@@ -283,7 +283,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_F8, opp, TRUE) | (GetAttackers(Board, BB_G8, opp, TRUE))) == 0)
-                    BBAddToMoveList(legal_move_list, next_move, BB_E8, BB_G8, MOVE_OO, 0);
+                    BBAddToMoveList(legal_move_list, next_move, BB_E8, BB_G8, MOVE_OO, CASTLE_SORT_VAL);
             }
         }
 
@@ -295,7 +295,7 @@ void BBGenerateCastles(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next_m
             {
                 // nobody attacking castling squares
                 if ((GetAttackers(Board, BB_D8, opp, TRUE) | (GetAttackers(Board, BB_C8, opp, TRUE))) == 0)
-                    BBAddToMoveList(legal_move_list, next_move, BB_E8, BB_C8, MOVE_OOO, 0);
+                    BBAddToMoveList(legal_move_list, next_move, BB_E8, BB_C8, MOVE_OOO, CASTLE_SORT_VAL);
             }
         }
     }
@@ -393,7 +393,8 @@ void BBGeneratePawnMoves(BB_BOARD *Board, CHESSMOVE *legal_move_list, WORD *next
                 PieceType	promoted;
 
                 for (promoted = FIRST_PROMOTE; promoted <= LAST_PROMOTE; promoted++)
-                    BBAddToMoveList(legal_move_list, next_move, (SquareType)square, (SquareType)dest, (MoveFlagType)(flag | promoted | MOVE_PROMOTED), score);
+                    BBAddToMoveList(legal_move_list, next_move, (SquareType)square, (SquareType)dest, (MoveFlagType)(flag | promoted | MOVE_PROMOTED), 
+						PROMOTION_SORT_VAL + nPieceVals[promoted]);
             }
             else
                 BBAddToMoveList(legal_move_list, next_move, (SquareType)square, (SquareType)dest, flag, score);

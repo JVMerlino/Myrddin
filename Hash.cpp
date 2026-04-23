@@ -18,20 +18,34 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #include <sys/types.h>
 #include <sys/timeb.h>
-#include <iostream>
 
 #include "Myrddin.h"
 #include "Bitboards.h"
 #include "Hash.h"
 #include "PArray.inc"
 
-#define LOG_HASH		FALSE
 #define ALWAYS_REPLACE	TRUE
+#define LOG_HASH		FALSE
 #define USE_INTERLOCKED FALSE
-#define HASH_AGING_FACTOR	4	// min number of plies difference between stored and incoming entry, including hash age
 
-HASH_ENTRY		*HashTable = NULL;
-EVAL_HASH_ENTRY *EvalHashTable = NULL;
+#if 0
+// Current root search age -- increment once per root search via BumpHashAge().
+// BYTE subtraction wraps mod 256, so rollover is handled correctly.
+static BYTE s_nHashAge = 0;
+
+void BumpHashAge(void)
+{
+	s_nHashAge++;
+}
+
+static inline bool HashEntryIsStale(const HASH_ENTRY* e)
+{
+	return (BYTE)(s_nHashAge - e->h.nAge) >= HASH_AGE_LIMIT;
+}
+#endif
+
+HASH_ENTRY* HashTable = NULL;
+EVAL_HASH_ENTRY* EvalHashTable = NULL;
 
 size_t	dwHashSize = DEFAULT_HASH_SIZE;	// this is the number of entries, not the actual memory size
 size_t	dwEvalHashSize = DEFAULT_HASH_SIZE * 2;	// ditto here
@@ -54,131 +68,104 @@ int nEvalHashBails = 0;
 ** ProbeHash - probes the transposition table for a matching entry
 **========================================================================
 */
-HASH_ENTRY *ProbeHash(PosSignature dwSignature)
+HASH_ENTRY* ProbeHash(PosSignature dwSignature)
 {
-    if (HashTable == NULL)
-        return(NULL);
+	if (HashTable == NULL)
+		return(NULL);
 
-    PosSignature	index = dwSignature & (dwHashSize - 1);
-    HASH_ENTRY		*pEntry = HashTable + index;
+	PosSignature	index = dwSignature & (dwHashSize - 1);
+	HASH_ENTRY* pEntry = HashTable + index;
 
 #if LOG_HASH
-    if (bLog)
-        nHashProbes++;
+	if (bLog)
+		nHashProbes++;
 #endif
 
 	if ((pEntry->h.dwSignature == dwSignature) /* && (pEntry->h.nDepth >= nDepth) */)
-    {
+	{
 #if LOG_HASH
 		if (bLog)
 			nHashHits++;
 #endif
-        return pEntry;
+		return pEntry;
 	}
-    else
-        return NULL;
+	else
+		return NULL;
 }
 
 /*========================================================================
 ** SaveHash - saves a move in the hash table if applicable
 **========================================================================
 */
-void SaveHash(CHESSMOVE *cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, PosSignature dwSignature)
+void SaveHash(CHESSMOVE* cmMove, int nDepth, int nEval, BYTE nFlags, int nPly, PosSignature dwSignature)
 {
-    if (HashTable == NULL)
-        return;
+	if (HashTable == NULL)
+		return;
 
 #if LOG_HASH
-    if (bLog)
-        nHashSaves++;
+	if (bLog)
+		nHashSaves++;
 #endif
 
-    PosSignature	index = dwSignature & (dwHashSize - 1);
-    HASH_ENTRY		*pEntry = HashTable + index;
+	PosSignature	index = dwSignature & (dwHashSize - 1);
+	HASH_ENTRY* pEntry = HashTable + index;
 
-#if USE_SMP
-	if ((pEntry->h.nDepth <= nDepth) || (nCPUs == 1)/* || pEntry->h.dwSignature == dwSignature */)
-		goto Replace;
-	else
-		return;
-#else
 #if ALWAYS_REPLACE
-    goto Replace;
+	goto Replace;
 #else
-    // ALWAYS REPLACE if depth is equal or larger or if the data is for the same position
-    if ((pEntry->h.nDepth <= nDepth) /* || pEntry->h.dwSignature == dwSignature */)
-        goto Replace;
-	else
+	// Replace when:
+	//   (a) slot is empty
+	//   (b) stored entry is for the same position (refresh)
+	//   (c) stored entry is stale (from an old search)
+	//   (d) incoming depth >= stored depth
+	// Protect a current, deeper entry belonging to a different position.
+	if (pEntry->h.dwSignature != 0 &&
+		pEntry->h.dwSignature != dwSignature &&
+//		!HashEntryIsStale(pEntry) &&
+		nDepth < (int)pEntry->h.nDepth)
+	{
+#if LOG_HASH
+		if (bLog)
+			nHashBails++;
+#endif
 		return;
+	}
 #endif
-
-#if 0
-    // stored hash entry is exact (but is for a different position)
-    // stored entry has no move and we have an incoming move
-    if ((pEntry->h.from == NO_SQUARE) && cmMove)
-        goto Replace;
-
-    if (pEntry->nFlags & HASH_EXACT)
-    {
-        // replace only if stored entry is not within aging factor of incoming entry
-        if ((pEntry->h.nAge + pEntry->h.nDepth + HASH_AGING_FACTOR) >= (nHashAge + nDepth))
-        {
-#if LOG_HASH
-            if (bLog)
-                nHashBails++;
-#endif
-            return;
-        }
-    }
-    // stored hash entry is upper or lower bound
-    else if ((pEntry->h.nFlags & (HASH_ALPHA | HASH_BETA)) && !(nFlags & HASH_EXACT))
-    {
-        // replace only if stored entry is not within aging factor of incoming entry
-        if ((pEntry->h.nAge + pEntry->h.nDepth + HASH_AGING_FACTOR) >= (nHashAge + nDepth))
-        {
-#if LOG_HASH
-            if (bLog)
-                nHashBails++;
-#endif
-            return;
-        }
-    }
-#endif	// if 0
-#endif	// ALWAYS_REPLACE
 
 Replace:
-    if (abs(nEval) >= MATE_THREAT)
-    {
-        if (nEval > 0)
-            nEval += nPly;
-        else
-            nEval -= nPly;
-    }
+	if (abs(nEval) >= MATE_THREAT)
+	{
+		if (nEval > 0)
+			nEval += nPly;
+		else
+			nEval -= nPly;
+	}
 
-//   HASH_ENTRY e;
+	//   HASH_ENTRY e;
 
 #if USE_INTERLOCKED
-    _InterlockedExchange64((volatile LONG64 *)&pEntry->h.dwSignature, dwSignature); // 8 byte atomic assignment of signature
+	_InterlockedExchange64((volatile LONG64*)&pEntry->h.dwSignature, dwSignature); // 8 byte atomic assignment of signature
 #else
 	pEntry->h.dwSignature = dwSignature;
 #endif
 
-    pEntry->h.nDepth = (BYTE)nDepth;
+	pEntry->h.nDepth = (BYTE)nDepth;
 	pEntry->h.nEval = (short)nEval;
 	pEntry->h.nFlags = nFlags;
-    if (cmMove)
-    {
+//	pEntry->h.nAge = s_nHashAge;
+	if (cmMove)
+	{
 		pEntry->h.moveflag = cmMove->moveflag;
 		pEntry->h.from = cmMove->fsquare;
 		pEntry->h.to = cmMove->tsquare;
-    }
-    else
+	}
+	else
 		pEntry->h.from = NO_SQUARE;
 
 #if USE_INTERLOCKED
-    _InterlockedExchange64((volatile LONG64 *)&pEntry->l[1] , e.l[1]); // 8 byte atomic assignment of all hash items except signature
+	_InterlockedExchange64((volatile LONG64*)&pEntry->l[1], e.l[1]); // 8 byte atomic assignment of all hash items except signature
 #else
-//	pEntry->l[1] = e.l[1];
+	//	pEntry->l[1] = e.l[1];
 #endif
 }
 
@@ -187,27 +174,27 @@ Replace:
 ** ProbeEvalHash - probes the eval hash table for a matching entry
 **========================================================================
 */
-EVAL_HASH_ENTRY *	ProbeEvalHash(PosSignature dwSignature)
+EVAL_HASH_ENTRY* ProbeEvalHash(PosSignature dwSignature)
 {
-    if (EvalHashTable == NULL)
-        return(NULL);
+	if (EvalHashTable == NULL)
+		return(NULL);
 
 #if 0 // LOG_HASH
-    nEvalHashProbes++;
+	nEvalHashProbes++;
 #endif
 
-    PosSignature	index = dwSignature & (dwEvalHashSize - 1);
-    EVAL_HASH_ENTRY *pEntry = EvalHashTable + index;
+	PosSignature	index = dwSignature & (dwEvalHashSize - 1);
+	EVAL_HASH_ENTRY* pEntry = EvalHashTable + index;
 
-    if (pEntry->dwSignature == dwSignature)
-    {
+	if (pEntry->dwSignature == dwSignature)
+	{
 #if 0 // LOG_HASH
-        nEvalHashHits++;
+		nEvalHashHits++;
 #endif
-        return pEntry;
-    }
-    else
-        return NULL;
+		return pEntry;
+	}
+	else
+		return NULL;
 }
 
 /*========================================================================
@@ -216,28 +203,28 @@ EVAL_HASH_ENTRY *	ProbeEvalHash(PosSignature dwSignature)
 */
 void SaveEvalHash(int nEval, PosSignature dwSignature)
 {
-    if (EvalHashTable == NULL)
-        return;
+	if (EvalHashTable == NULL)
+		return;
 
-    PosSignature	index = dwSignature & (dwEvalHashSize - 1);
-    EVAL_HASH_ENTRY *pEntry = EvalHashTable + index;
+	PosSignature	index = dwSignature & (dwEvalHashSize - 1);
+	EVAL_HASH_ENTRY* pEntry = EvalHashTable + index;
 
-    if (pEntry->dwSignature != dwSignature)
-    {
+	if (pEntry->dwSignature != dwSignature)
+	{
 #if 0 // LOG_HASH
-        nEvalHashSaves++;
+		nEvalHashSaves++;
 #endif
 #if USE_INTERLOCKED
-        _InterlockedExchange64((volatile LONG64 *)&pEntry->nEval,  (long long) nEval);
-        _InterlockedExchange64((volatile LONG64 *)&pEntry->dwSignature , dwSignature);
+		_InterlockedExchange64((volatile LONG64*)&pEntry->nEval, (long long)nEval);
+		_InterlockedExchange64((volatile LONG64*)&pEntry->dwSignature, dwSignature);
 #else
 		pEntry->nEval = (short)nEval;
 		pEntry->dwSignature = dwSignature;
 #endif
-    }
+	}
 #if 0 // LOG_HASH
-    else
-        nEvalHashBails++;
+	else
+		nEvalHashBails++;
 #endif
 }
 #endif	// USE_EVAL_HASH
@@ -250,18 +237,18 @@ void SaveEvalHash(int nEval, PosSignature dwSignature)
 void ClearHash(void)
 {
 #if USE_SMP
-    if (bSlave)
-        return;
+	if (bSlave)
+		return;
 #endif
-	
-	if (HashTable == NULL)
-        return;
 
-    memset(HashTable, 0, sizeof(HASH_ENTRY) * dwHashSize);
+	if (HashTable == NULL)
+		return;
+
+	memset(HashTable, 0, sizeof(HASH_ENTRY) * dwHashSize);
 
 #if USE_EVAL_HASH
-    if (EvalHashTable)
-        memset(EvalHashTable, 0, sizeof(EVAL_HASH_ENTRY) * dwEvalHashSize);
+	if (EvalHashTable)
+		memset(EvalHashTable, 0, sizeof(EVAL_HASH_ENTRY) * dwEvalHashSize);
 #endif
 }
 
@@ -271,163 +258,151 @@ void ClearHash(void)
 */
 HASH_ENTRY* InitHash(void)
 {
-    if (!bSlave)
-    {
+	if (!bSlave)
+	{
 #if 0
-        printf("# allocating hash table of %lld (%dMB) size\n", dwHashSize * sizeof(HASH_ENTRY),
-               (dwHashSize * sizeof(HASH_ENTRY)) >> 20);
+		printf("# allocating hash table of %lld (%dMB) size\n", dwHashSize * sizeof(HASH_ENTRY),
+			(dwHashSize * sizeof(HASH_ENTRY)) >> 20);
 #endif
 
 #if !USE_SMP
-        if (bLog)
-            fprintf(logfile, "allocating hash table of %ld (%dMB) size, each entry is %d bytes\n", dwHashSize * sizeof(HASH_ENTRY),
-                    (dwHashSize * sizeof(HASH_ENTRY)) >> 20, sizeof(HASH_ENTRY));
+		if (bLog)
+			fprintf(logfile, "allocating hash table of %ld (%dMB) size, each entry is %d bytes\n", dwHashSize * sizeof(HASH_ENTRY),
+				(dwHashSize * sizeof(HASH_ENTRY)) >> 20, sizeof(HASH_ENTRY));
 
-        HashTable = (HASH_ENTRY *)malloc(dwHashSize * sizeof(HASH_ENTRY));
+		HashTable = (HASH_ENTRY*)malloc(dwHashSize * sizeof(HASH_ENTRY));
 
 #if USE_EVAL_HASH
-        if (bLog)
-            fprintf(logfile, "allocating eval hash table of %ld (%dMB) size, each entry is %d bytes\n", dwEvalHashSize * sizeof(EVAL_HASH_ENTRY),
-                    (dwEvalHashSize * sizeof(EVAL_HASH_ENTRY)) >> 20, sizeof(EVAL_HASH_ENTRY));
+		if (bLog)
+			fprintf(logfile, "allocating eval hash table of %ld (%dMB) size, each entry is %d bytes\n", dwEvalHashSize * sizeof(EVAL_HASH_ENTRY),
+				(dwEvalHashSize * sizeof(EVAL_HASH_ENTRY)) >> 20, sizeof(EVAL_HASH_ENTRY));
 
-        EvalHashTable = (EVAL_HASH_ENTRY *)malloc(dwEvalHashSize * sizeof(EVAL_HASH_ENTRY));
+		EvalHashTable = (EVAL_HASH_ENTRY*)malloc(dwEvalHashSize * sizeof(EVAL_HASH_ENTRY));
 #endif
 
-        if (HashTable)
-            ClearHash();
+		if (HashTable)
+			ClearHash();
 #endif	// !USE_SMP
-    }
+	}
 
 #if USE_SMP
-    typedef  union  hilo {
-        unsigned long a[2];
-        unsigned long long b;
-    } hilo;
+	typedef  union  hilo {
+		unsigned long a[2];
+		unsigned long long b;
+	} hilo;
 
 	_timeb tb;
 
 	_ftime(&tb);
 	srand(tb.time);
 	if (!bSlave)
-    {
+	{
 		// create shared memory for slave processes (even if they're aren't any, because of the "cores" command)
-		hilo h={0};
-   		h.b = dwHashSize * sizeof (HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY);
+		hilo h = { 0 };
+		h.b = dwHashSize * sizeof(HASH_ENTRY) + dwEvalHashSize * sizeof(EVAL_HASH_ENTRY);
 
-		sprintf(szSharedHashName, "MSH-%lld-%d-08X", (long long)tb.time, tb.millitm, GetCurrentProcessId());
-		sprintf(szSharedMemName, "MSM-%lld-%d-08X", (long long)tb.time, tb.millitm, GetCurrentProcessId());
+		sprintf(szSharedHashName, "MSH-%lld-%d-%08X", (long long)tb.time, tb.millitm, GetCurrentProcessId());
+		sprintf(szSharedMemName, "MSM-%lld-%d-%08X", (long long)tb.time, tb.millitm, GetCurrentProcessId());
 		hSharedHash = CreateFileMapping(
-							INVALID_HANDLE_VALUE,    // use paging file
-							NULL,                    // default security
-							PAGE_READWRITE,          // read/write access
-							h.a[1],   // maximum object size (high-order DWORD)
-							h.a[0],  // maximum object size (low-order DWORD)
-							szSharedHashName);       // name of mapping object
+			INVALID_HANDLE_VALUE,    // use paging file
+			NULL,                    // default security
+			PAGE_READWRITE,          // read/write access
+			h.a[1],   // maximum object size (high-order DWORD)
+			h.a[0],  // maximum object size (low-order DWORD)
+			szSharedHashName);       // name of mapping object
 
 		if (hSharedHash != NULL)
 		{
-			HashTable = (HASH_ENTRY *)MapViewOfFile(hSharedHash,   // handle to map object
-													FILE_MAP_ALL_ACCESS, // read/write permission
-													0,
-													0,
-													0);
+			HashTable = (HASH_ENTRY*)MapViewOfFile(hSharedHash,   // handle to map object
+				FILE_MAP_ALL_ACCESS, // read/write permission
+				0,
+				0,
+				0);
 
-			EvalHashTable = (EVAL_HASH_ENTRY *) ((char *) HashTable + dwHashSize * sizeof (HASH_ENTRY));
+			EvalHashTable = (EVAL_HASH_ENTRY*)((char*)HashTable + dwHashSize * sizeof(HASH_ENTRY));
 #if DEBUG_SMP
 			printf("Master says hash = %08X, eval = %08X\n", &HashTable, &EvalHashTable);
 #endif
 			if (HashTable)
 				ClearHash();
 		}
-		else
-		{
-			printf("Unable to create hSharedHash - %d\n", (int)GetLastError());
-			fflush(stdout);
-			return(NULL);
-		}
 
 		hSharedMem = CreateFileMapping(
-							INVALID_HANDLE_VALUE,    // use paging file
-							NULL,                    // default security
-							PAGE_READWRITE,          // read/write access
-							0,                       // maximum object size (high-order DWORD)
-							sizeof(SHARED_MEM),     // maximum object size (low-order DWORD)
-							szSharedMemName);       // name of mapping object
+			INVALID_HANDLE_VALUE,    // use paging file
+			NULL,                    // default security
+			PAGE_READWRITE,          // read/write access
+			0,                       // maximum object size (high-order DWORD)
+			sizeof(SHARED_MEM),     // maximum object size (low-order DWORD)
+			szSharedMemName);       // name of mapping object
 
 		if (hSharedMem != NULL)
 		{
-			smSharedMem = (PSHARED_MEM) MapViewOfFile(hSharedMem,   // handle to map object
-							FILE_MAP_ALL_ACCESS, // read/write permission
-							0,
-							0,
-							sizeof(SHARED_MEM));
+			smSharedMem = (PSHARED_MEM)MapViewOfFile(hSharedMem,   // handle to map object
+				FILE_MAP_ALL_ACCESS, // read/write permission
+				0,
+				0,
+				sizeof(SHARED_MEM));
 
 #if DEBUG_SMP
 			if (smSharedMem != NULL)
 				printf("Master says Shared Mem = %08X\n", &smSharedMem);
 #endif
 		}
-		else
+	}
+	else if (bSlave)
+	{
+		hSharedHash = OpenFileMapping(
+			FILE_MAP_ALL_ACCESS,   // read/write access
+			FALSE,                 // do not inherit the name
+			szSharedHashName);     // name of mapping object
+
+		if (hSharedHash != NULL)
 		{
-			printf("Unable to create hSharedMem - %d\n", (int)GetLastError());
-			fflush(stdout);
-			return(NULL);
-		}
-    }
-    else if (bSlave)
-    {
-        hSharedHash = OpenFileMapping(
-                          FILE_MAP_ALL_ACCESS,   // read/write access
-                          FALSE,                 // do not inherit the name
-                          szSharedHashName);     // name of mapping object
+			HashTable = (HASH_ENTRY*)MapViewOfFile(hSharedHash, // handle to map object
+				FILE_MAP_ALL_ACCESS,  // read/write permission
+				0,
+				0,
+				dwHashSize * sizeof(HASH_ENTRY) + dwEvalHashSize * sizeof(EVAL_HASH_ENTRY));
 
-        if (hSharedHash != NULL)
-        {
-            HashTable = (HASH_ENTRY *)MapViewOfFile(hSharedHash, // handle to map object
-                                                    FILE_MAP_ALL_ACCESS,  // read/write permission
-                                                    0,
-                                                    0,
-                                                    dwHashSize * sizeof (HASH_ENTRY) + dwEvalHashSize * sizeof (EVAL_HASH_ENTRY));
-
-            EvalHashTable = (EVAL_HASH_ENTRY *) ((char *) HashTable + dwHashSize * sizeof (HASH_ENTRY));
+			EvalHashTable = (EVAL_HASH_ENTRY*)((char*)HashTable + dwHashSize * sizeof(HASH_ENTRY));
 
 #if DEBUG_SMP
-            if (HashTable == NULL)
-                printf("Could not map view of file (%s).\n", szSharedHashName);
-            else
+			if (HashTable == NULL)
+				printf("Could not map view of file (%s).\n", szSharedHashName);
+			else
 			{
-                printf("Slave says hash = %08X, shared eval = %08X\n", &HashTable, &EvalHashTable);
+				printf("Slave says hash = %08X, shared eval = %08X\n", &HashTable, &EvalHashTable);
 				printf("Slave says it is number %d\n", nSlaveNum);
 			}
 #endif
-        }
+		}
 
-        hSharedMem = OpenFileMapping(
-                         FILE_MAP_ALL_ACCESS,   // read/write access
-                         FALSE,                 // do not inherit the name
-                         szSharedMemName);     // name of mapping object
+		hSharedMem = OpenFileMapping(
+			FILE_MAP_ALL_ACCESS,   // read/write access
+			FALSE,                 // do not inherit the name
+			szSharedMemName);     // name of mapping object
 
-        if (hSharedMem != NULL)
-        {
-            smSharedMem = (PSHARED_MEM)MapViewOfFile(hSharedMem, // handle to map object
-                          FILE_MAP_ALL_ACCESS,  // read/write permission
-                          0,
-                          0,
-                          sizeof(SHARED_MEM));
+		if (hSharedMem != NULL)
+		{
+			smSharedMem = (PSHARED_MEM)MapViewOfFile(hSharedMem, // handle to map object
+				FILE_MAP_ALL_ACCESS,  // read/write permission
+				0,
+				0,
+				sizeof(SHARED_MEM));
 
 			ZeroMemory(&smSharedMem->sdSlaveData[nSlaveNum], sizeof(SLAVE_DATA));
 
 #if DEBUG_SMP
-            if (smSharedMem == NULL)
-                printf("Could not map view of file (%s).\n", szSharedMemName);
-            else
-                printf("Slave says SharedMem = %08X\n", &smSharedMem);
+			if (smSharedMem == NULL)
+				printf("Could not map view of file (%s).\n", szSharedMemName);
+			else
+				printf("Slave says SharedMem = %08X\n", &smSharedMem);
 #endif
-        }
-    }
+		}
+	}
 #endif	// USE_SMP
 
-    return(HashTable);
+	return(HashTable);
 }
 
 /*========================================================================
@@ -436,20 +411,20 @@ HASH_ENTRY* InitHash(void)
 */
 void CloseHash(void)
 {
-    if (HashTable == NULL)
-        return;
+	if (HashTable == NULL)
+		return;
 
 #if USE_SMP
-    if (bSlave)
-        return;
+	if (bSlave)
+		return;
 #endif
 
 #if LOG_HASH
-    if (bLog)
-    {
-        printf("Hash Stats: Saves = %d, Bails = %d, Probes = %d, Hits = %d, Returns = %d, Zeroes = %d\n",
-                nHashSaves, nHashBails, nHashProbes, nHashHits, nHashReturns, nHashZeroes);
-    }
+	if (bLog)
+	{
+		printf("Hash Stats: Saves = %d, Bails = %d, Probes = %d, Hits = %d, Returns = %d, Zeroes = %d\n",
+			nHashSaves, nHashBails, nHashProbes, nHashHits, nHashReturns, nHashZeroes);
+	}
 #endif
 
 #if USE_SMP
@@ -460,10 +435,10 @@ void CloseHash(void)
 	if (hSharedHash)
 		CloseHandle(hSharedHash);
 #else
-    free(HashTable);
+	free(HashTable);
 
 #if USE_EVAL_HASH
-    free(EvalHashTable);
+	free(EvalHashTable);
 #endif
 #endif
 }
@@ -473,33 +448,33 @@ void CloseHash(void)
 ** GetBBSignature -- get the Zobrist hash signature of a board position
 **========================================================================
 */
-PosSignature GetBBSignature(BB_BOARD *bbBoard)
+PosSignature GetBBSignature(BB_BOARD* bbBoard)
 {
-    int				piece, color, sq;
-    Bitboard		pieces;
-    PosSignature	sig = 0;
+	int				piece, color, sq;
+	Bitboard		pieces;
+	PosSignature	sig = 0;
 
-    for (piece = KING; piece <= PAWN; piece++)
-    {
-        for (color = WHITE; color <= BLACK; color++)
-        {
-            pieces = bbBoard->bbPieces[piece][color];
-
-            while (pieces)
-            {
-                sq = BitScan(PopLSB(&pieces));
-                sig ^= aPArray[piece + (color * 6)][sq];
-            }
-        }
-    }
-
-    sig ^= aSTMArray[bbBoard->sidetomove];	// side to move
-    sig ^= aCSArray[bbBoard->castles];	// castle status
-    if (bbBoard->epSquare != NO_EN_PASSANT)
+	for (piece = KING; piece <= PAWN; piece++)
 	{
-		INDEX_CHECK(bbBoard->epSquare, aEPArray);
-        sig ^= aEPArray[bbBoard->epSquare];
+		for (color = WHITE; color <= BLACK; color++)
+		{
+			pieces = bbBoard->bbPieces[piece][color];
+
+			while (pieces)
+			{
+				sq = BitScan(PopLSB(&pieces));
+				sig ^= aPArray[piece + (color * 6)][sq];
+			}
+		}
 	}
 
-    return(sig);
+	sig ^= aSTMArray[bbBoard->sidetomove];	// side to move
+	sig ^= aCSArray[bbBoard->castles];	// castle status
+	if (bbBoard->epSquare != NO_EN_PASSANT)
+	{
+		INDEX_CHECK(bbBoard->epSquare, aEPArray);
+		sig ^= aEPArray[bbBoard->epSquare];
+	}
+
+	return(sig);
 }

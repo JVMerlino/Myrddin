@@ -238,7 +238,6 @@ void FIND_OPENING(void)                                 // input : BOOKFILE / EP
     unsigned char zcd[200],zce[200],vb[100];
     char fentab[]   = "??PNBRQKpnbrqk??";
     char fenkleur[] = "wb??";
-    clock_t a;
 
     ERR=0;
 
@@ -256,7 +255,6 @@ void FIND_OPENING(void)                                 // input : BOOKFILE / EP
     vb[0]=255;
 
     RND=clock();                                // initialize randomizer
-    a=clock();
     srand(clock());
     x=rand();
     rnd=RND+x;

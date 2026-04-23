@@ -16,6 +16,9 @@ You should have received a copy of the GNU General Public License
 along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
+#ifndef MYRDDIN_H
+#define MYRDDIN_H
+
 #include <windows.h>
 #include <stdio.h>
 #include <time.h>
@@ -46,6 +49,8 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define MAX_ASPIRATION_SEARCHES	3
 #define ASPIRATION_WINDOW	16
 
+#define NUM_RESIGN_MOVES	3
+
 #define USE_IID				FALSE
 #define USE_IIR             TRUE
 #define USE_IMPROVING		FALSE
@@ -61,7 +66,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define USE_LMP				TRUE
 
 #define USE_SEE				TRUE	
-#define USE_SEE_MOVE_ORDER	FALSE	// not helpful
+#define USE_SEE_MOVE_ORDER	TRUE	// not helpful
 
 #define USE_INCREMENTAL_ACC_UPDATE TRUE
 
@@ -77,7 +82,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 
 #define USE_OPENING_BOOK	TRUE
 
-#define DO_SELF_PLAY		FALSE	
+#define DO_SELF_PLAY		FALSE
 
 #if DO_SELF_PLAY
 #define SELF_PLAY_RANDOM_MOVES	8
@@ -183,23 +188,23 @@ typedef unsigned long long	PosSignature;
 // a chess move
 typedef struct
 {
-    PosSignature	dwSignature;
-    BYTE			castle_status;
-    SquareType		en_passant_pawn;
-    BYTE			in_check_status;
-    BYTE			fifty_move;
-    SquareType		capture_square;
-    PieceType		captured_piece;
-} UNDOMOVE, *PUNDOMOVE;
+	PosSignature	dwSignature;
+	BYTE			castle_status;
+	SquareType		en_passant_pawn;
+	BYTE			in_check_status;
+	BYTE			fifty_move;
+	SquareType		capture_square;
+	PieceType		captured_piece;
+} UNDOMOVE, * PUNDOMOVE;
 
 typedef struct
 {
-    PosSignature	dwSignature;
-    int 			nScore;	// for move ordering
-    MoveFlagType	moveflag;
-    SquareType		fsquare;
-    SquareType		tsquare;
-    UNDOMOVE		save_undo;
+	PosSignature	dwSignature;
+	int 			nScore;	// for move ordering
+	MoveFlagType	moveflag;
+	SquareType		fsquare;
+	SquareType		tsquare;
+	UNDOMOVE		save_undo;
 } CHESSMOVE;
 
 typedef struct
@@ -211,8 +216,8 @@ typedef struct
 
 typedef struct
 {
-    int			pvLength;
-    PVMOVE		pv[MAX_DEPTH+10];
+	int			pvLength;
+	PVMOVE		pv[MAX_DEPTH + 10];
 } PV;
 
 extern BOOL			bSlave;
@@ -224,34 +229,34 @@ extern int			nSlaveNum;
 
 typedef struct
 {
-    char		szEngineCommand[NUM_SLAVE_STRINGS][256];
+	char		szEngineCommand[NUM_SLAVE_STRINGS][256];
 	int			nNextToSend;
 	int			nNextToReceive;
-    int			nSearchNodes;
+	int			nSearchNodes;
 	BOOL		bLocked;
-} SLAVE_DATA, *PSLAVE_DATA;
+} SLAVE_DATA, * PSLAVE_DATA;
 
 typedef struct
 {
 	SLAVE_DATA	sdSlaveData[MAX_CPUS - 1];
-} SHARED_MEM, *PSHARED_MEM;
+} SHARED_MEM, * PSHARED_MEM;
 
 typedef struct
 {
-    PVOID HashTable;
-    PVOID EvalHashTable;
-} SHARED_HASH, *PSHARED_HASH;
+	PVOID HashTable;
+	PVOID EvalHashTable;
+} SHARED_HASH, * PSHARED_HASH;
 
 extern int			nCPUs;
 extern HANDLE		hSharedMem, hSharedHash;
 extern char			szSharedMemName[128];
 extern char			szSharedHashName[128];
-extern SHARED_MEM	*smSharedMem;
-extern SHARED_HASH  *shSharedHash;
+extern SHARED_MEM* smSharedMem;
+extern SHARED_HASH* shSharedHash;
 
 void KillProcesses(void);
 void StartProcesses(int nCPUs);
-void SendSlavesString(char *szString);
+void SendSlavesString(char* szString);
 #endif	// USE_SMP
 
 extern CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
@@ -271,7 +276,7 @@ extern int		nEGTBCompressionType;
 extern char     szEGTBPath[MAX_PATH];
 
 extern PosSignature	dwInitialPosSignature;
-extern BOOL			bLog, bExactThinkTime, bExactThinkDepth, bExactThinkNodes;
+extern BOOL			bLog, bExactThinkTime, bExactThinkDepth, bExactThinkNodes, bLabelling;
 extern int			nEngineMode, nEngineCommand;
 extern unsigned int	nGameMove, nFifty;
 extern int			nCompSide;
@@ -282,11 +287,13 @@ extern ULONGLONG    nThinkStart;
 extern int			nClockRemaining;
 extern unsigned int nCheckNodes, nThinkNodes;	// number of nodes to search before checking time management
 extern CHESSMOVE	cmChosenMove, cmPonderMove;
-extern FILE		   *logfile;
+extern FILE* logfile;
 
 BOOL	CheckForInput(BOOL bWaitForInput);
 void 	HandleCommand(void);
 
 void	PrintPV(int nPVEval, int nSideToMove, char comment, BOOL bPrintKibitz);
-char   *MoveToString(char *moveString, CHESSMOVE *move, BOOL bAddMove);
-char   *PVMoveToString(char* moveString, PVMOVE* move, BOOL bAddMove);
+char* MoveToString(char* moveString, CHESSMOVE* move, BOOL bAddMove);
+char* PVMoveToString(char* moveString, PVMOVE* move, BOOL bAddMove);
+
+#endif  // MYRDDIN_H

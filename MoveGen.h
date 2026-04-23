@@ -41,11 +41,17 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 // move scoring values
 #define  HASH_SORT_VAL		0x500000
 #define  CAPTURE_SORT_VAL	0x200000
+#define	 WINNING_CAP_BONUS	0x020000
+#define  LOSING_CAP_PENALTY 0x020000
+#define	 CASTLE_SORT_VAL	0x205000
 
-#define  KILLER_1_SORT_VAL  0x200003	// this places killer moves after good captures, but before equal or losing captures
+#define  KILLER_1_SORT_VAL  0x200003	
 #define  KILLER_2_SORT_VAL  0x200002
 #define  KILLER_3_SORT_VAL  0x200001
+#define	 COUNTER_MOVE_BONUS 0x200000
 #define  MATE_KILLER_BONUS  0x010000
+
+#define  PROMOTION_SORT_VAL 0x009000
 
 #define	 MAX_HISTORY_VAL	0x0FFFFF
 

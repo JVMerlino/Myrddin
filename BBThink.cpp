@@ -73,6 +73,7 @@ PERFT_TEST	perft_tests[NUM_PERFT_TESTS] =
 
 #if USE_KILLERS
 static KILLER		cmKillers[MAX_DEPTH + 2][MAX_KILLERS];
+CHESSMOVE	counterMove[64][64];
 #endif
 
 #if USE_HISTORY
@@ -310,7 +311,7 @@ static inline CHESSMOVE* GetNextMove(CHESSMOVE* MoveList, int nNumMoves)
 ** heuristics
 **========================================================================
 */
-static inline void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves)
+static inline void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves, int nSideToMove)
 {
 	int	n;
 	CHESSMOVE cmMove;
@@ -325,10 +326,26 @@ static inline void ScoreMoves(CHESSMOVE* MoveList, int nNumMoves)
 
 #if USE_SEE_MOVE_ORDER
 		if (cmMove.moveflag & MOVE_CAPTURE)
-			cmMove.nScore = MoveList[n].nScore += BBSEEMove(&cmMove, nSideToMove);
+		{
+			int nSee = BBSEEMove(&cmMove, nSideToMove);
+
+			if (nSee > 0)
+				MoveList[n].nScore += (WINNING_CAP_BONUS + nSee);
+			else if (nSee < 0)
+				MoveList[n].nScore -= (LOSING_CAP_PENALTY + nSee);
+
+			cmMove.nScore = MoveList[n].nScore;
+		}
 #endif
 
 #if USE_KILLERS
+		CHESSMOVE prevMove = cmEvalGameMoveList[nEvalMove - 1];
+		if ((cmMove.tsquare == counterMove[prevMove.fsquare][prevMove.tsquare].tsquare) &&
+			(cmMove.fsquare == counterMove[prevMove.fsquare][prevMove.tsquare].fsquare))
+		{
+			cmMove.nScore += COUNTER_MOVE_BONUS;
+		}
+
 		if (cmMove.nScore >= KILLER_1_SORT_VAL)
 			continue;
 
@@ -665,7 +682,7 @@ static int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 #if USE_HASH_IN_QS
 	// probe the hash table
 	int			nHashFlags = 0;
-	BYTE		nHashType = HASH_ALPHA;
+//	BYTE		nHashType = HASH_ALPHA;
 	HASH_ENTRY* heHash = ProbeHash(bbEvalBoard.signature);
 
 	if ((heHash != NULL) && (nEngineMode == ENGINE_PONDERING ? nEvalPly >= 3 : nEvalPly >= 2))
@@ -680,7 +697,7 @@ static int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 #endif
 		nHashFlags = heHash->h.nFlags;
 
-//		if (heHash->h.nDepth >= nDepth)
+//		if (heHash->h.nDepth >= nEvalPly)
 		{
 			int nHashEval = heHash->h.nEval;
 
@@ -766,7 +783,7 @@ static int BBQuiesce(int nAlpha, int nBeta, PV* pvLine)
 		return(nStandPat);
 	}
 
-	//  ScoreMoves(&cmEvalMoveList[0], nNumMoves);	// not necessary unless ScoreMoves() changes!
+//	ScoreMoves(&cmEvalMoveList[0], nNumMoves);	// not necessary unless ScoreMoves() changes!
 
 	for (n = 0; n < nNumLegalMoves; n++)
 	{
@@ -1104,6 +1121,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 	int nStaticEval = -MAX_WINDOW;
 
 #if USE_FUTILITY_PRUNING
+#if 0
 	if (!bNullMove && !bPVNode && !bInCheck && (nDepth < 4))
 	{
 		int nAlphaMargin[4] = { 20000, 150, 275, 325 };
@@ -1127,6 +1145,30 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		if (nStaticEval >= nBeta + nBetaMargin[nDepth])
 			return(nBeta); 
 	}
+#else
+	if (!bPVNode && !bInCheck)
+	{
+		if ((nDepth <= 7) && (abs(nBeta) < MATE_THREAT))
+		{
+			nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
+			if ((nStaticEval - (75 * nDepth)) >= nBeta)
+				return(nBeta);
+		}
+
+		if (nDepth <= 3)
+		{
+			int nMargin = 300 + (200 * (nDepth - 1));
+			if (nStaticEval == -MAX_WINDOW)
+				nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
+			if (nStaticEval + nMargin <= nAlpha)
+			{
+				int nScore = BBQuiesce(nAlpha, nBeta, pvLine);
+				if (nScore <= nAlpha)
+					return(nAlpha);
+			}
+		}
+	}
+#endif
 #endif
 
 #if USE_NULL_MOVE
@@ -1307,7 +1349,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 
 #if USE_IIR
 	// Still didn't find a good move, so just reduce
-	if ((nEvalPly > 1) && !bFound && !bPVNode && (nDepth >= 4))
+	if ((nEvalPly > 1) && !bFound && /* !bPVNode && */ (nDepth >= 4))
 		nDepth--;
 #endif
 
@@ -1317,23 +1359,23 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 	if (nEngineCommand == STOP_THINKING)	// just stop thinking and return to the main loop as quickly as possible, losing all search info
 		return(0);
 
-	ScoreMoves(&cmEvalMoveList[0], nNumMoves);
+	ScoreMoves(&cmEvalMoveList[0], nNumMoves, bbEvalBoard.sidetomove);
 
-#if FULL_LOG
-	if (bLog)
+#if 0
+//	if (bLog)
 	{
 		if (nEvalPly == 0)
 		{
-			fprintf(logfile, "Depth = %d, nAlpha = %d, nBeta = %d\n", nDepth, nAlpha, nBeta);
+			printf("Depth = %d, nAlpha = %d, nBeta = %d\n", nDepth, nAlpha, nBeta);
 
 			for (n = 0; n < nNumMoves; n++)
 			{
-				fprintf(logfile, "Move %d: %c%c-%c%c = %08X\n", n,
+				printf("Move %d: %c%c-%c%c = %d (%08X)\n", n,
 					BBSQ2COLNAME(cmEvalMoveList[n].fsquare), BBSQ2ROWNAME(cmEvalMoveList[n].fsquare),
 					BBSQ2COLNAME(cmEvalMoveList[n].tsquare), BBSQ2ROWNAME(cmEvalMoveList[n].tsquare),
-					cmEvalMoveList[n].nScore);
+					cmEvalMoveList[n].nScore, cmEvalMoveList[n].nScore);
 			}
-			fflush(logfile);
+//			fflush(logfile);
 		}
 	}
 #endif
@@ -1410,8 +1452,8 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 			if (nReductions && bPVNode)
 				nReductions--;
 #if USE_IMPROVING
-			if (nReductions && bImproving)
-				nReductions--;
+			if (!bImproving)
+				nReductions++;
 #endif
 //			if (nReductions && (cmMove.nScore >= KILLER_3_SORT_VAL) && !(cmMove.moveflag & MOVE_CAPTURE))  // reduce less for quiet killer moves
 //				nReductions--;
@@ -1533,7 +1575,11 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 			{
 #if USE_KILLERS
 				if ((cmBestMove.moveflag & (MOVE_CAPTURE | MOVE_PROMOTED)) == 0)
+				{
+					CHESSMOVE prevMove = cmEvalGameMoveList[nEvalMove - 1];
 					UpdateKiller(nEvalPly, &cmBestMove, nEval);	// update killers only for non-capture and non-promotion moves
+					counterMove[prevMove.fsquare][prevMove.tsquare] = cmBestMove;
+				}
 #endif
 
 #if USE_HASH
@@ -1608,6 +1654,7 @@ int	Think(int nDepth)
 		ClearHistory();
 #endif
 #if USE_HASH
+//		BumpHashAge();
 //      nHashAge++;
 //		ClearHash();
 #endif
@@ -1723,9 +1770,11 @@ void InitThink(void)
 		{
 			// listed in order of aggressiveness (least to most)
 			// red = (int)(1.2 + (log(d) * log(m)) / 4.0);		// courtesy Blocky
-			// red = (int)(0.38 + log(d) * log(m) / 2.17);		// courtesy Publius
-			// red = (int)(0.32 + (log(d) * log(m)) / 2.24);	// courtesy Nawito
 			red = (int)(0.5 + (log(d) * log(m)) / 2.5);		// my own guesstimate
+			// red = (int)(0.32 + (log(d) * log(m)) / 2.24);	// courtesy Nawito
+			// red = (int)(0.5 + log(d) * log(m) / 2.3);		// courtesy Claude AI :-)
+			// red = (int)(0.38 + log(d) * log(m) / 2.17);		// courtesy Publius
+			// red = (int)(0.75 + (log(d) * log(m)) / 2.25);	// courtesy Kociolek
 			// red = (int)(1 + (log(d) * log(m)) / 2.0);		// courtesy Supernova
 			// red = (int)((0.81 * log(d)) + (1.08 * log(m)));	// courtesy Dumb
 

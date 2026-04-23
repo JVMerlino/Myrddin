@@ -32,14 +32,17 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 // The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// Integrated Cerebrum NN library 2.0
-// Added Late Move Pruning
-// Changes to LMR conditions
-// Added support for "nps" command for fast self-play capability
-// Fixed a bug that allocated too much eval hash - eval hash memory is now allocated as an additional 15% of transposition memory
+// Now using SEE for move ordering of captures, and raised castling moves higher in the move order
+// Now using IIR on pv nodes
+// More aggressive futility pruning
+// Added forced 16-byte alignment of transposition and eval hash structures (thanks to Jim Ablett!)
+// Added counter move heuristic
+// New network architecture of 768->1024->32->1
+// Fixed a bug such that fractional time increments, common in hyperbullet or testing (e.g. 0.1 second), were ignored due to truncation. 
+//		So an increment of 0.1 second per move would be set to 0.
+// Restored the resign feature, which somehow got deleted in v0.91
 //
 // TODO -- in no particular order
-// Use IIR on pv nodes?
 
 #include <conio.h>
 #include <signal.h>
@@ -67,8 +70,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include "gtb-probe.h"
 #endif
 
-char	szVersion[16] = "Myrddin 0.94";
-char	szInfo[32] = "12/9/25";
+char	szVersion[16] = "Myrddin 0.95";
+char	szInfo[32] = "4/19/26";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
@@ -96,10 +99,11 @@ unsigned int	nCheckNodes, nThinkNodes;
 CHESSMOVE		cmChosenMove, cmPonderMove;
 BB_BOARD		bbPonderRestore;
 ULONGLONG		nThinkStart;
-BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth, bExactThinkNodes;
+BOOL 			bPost, bStoreCommand, bInBook, bPondering, bXboard, bComputer, bExactThinkTime, bExactThinkDepth, bExactThinkNodes, bLabelling;
+int				nResignVal = 0, nResignMoves = 0;
 int				nEngineMode, nEngineCommand;
 PosSignature	dwInitialPosSignature;
-FILE		   *logfile;
+FILE		   *logfile, *positions, *labelled;
 char			line[512], command[512];
 int				is_pipe = 0;
 HANDLE			input_handle = 0;
@@ -191,7 +195,7 @@ void SetHashSize(unsigned int size)	// size in MB
 
 	// this distribution of the memory allocation will result in about 15% more memory than requested - no big deal
 	dwHashSize = p << 15;	// number of entries in transposition table
-	dwEvalHashSize = dwHashSize * 2;	// number of entries in eval table
+	dwEvalHashSize = dwHashSize;	// number of entries in eval table
 //	printf("size = %d, dwHashSize = %08X, %ld, dwEvalHashSize = %08X, %ld\n", size, dwHashSize, dwHashSize * sizeof(HASH_ENTRY), dwEvalHashSize, dwEvalHashSize * sizeof(EVAL_HASH_ENTRY));
 }
 
@@ -226,6 +230,11 @@ void ParseIniFile(void)
             // "kibitz" -- valid values: 1 = kibitz PV output, 0 = do not kibitz PV output
             bKibitz = (command[7] == '1');
         }
+		else if (strnicmp(command, "resign=", 7) == 0)
+		{
+			// "resign" -- valid values: 1 = allow resigning, 0 = do not allow resigning
+			nResignVal = atoi(&command[7]);
+		}
 #if USE_HASH
         else if (strnicmp(command, "hashsize=", 9) == 0)
         {
@@ -355,6 +364,9 @@ void InitializeInput(void)
 int IsInputAvailable(void)
 {
     DWORD	nchars;
+
+	if (bLabelling)
+		return(FALSE);
 
     if (is_pipe)
     {
@@ -633,6 +645,95 @@ BOOL BoardIsMaterialDraw(BB_BOARD *board)
     return(FALSE);
 }
 
+void LabelPositionsFile(char* szFileName)
+{
+	char labelfile[FILENAME_MAX];
+	char* c;
+	float	labelscore, new_eval, final_eval;
+
+	bLabelling = TRUE;
+
+	positions = fopen(szFileName, "r");
+	strcpy(labelfile, szFileName);
+	c = strchr(labelfile, '.');
+//	printf("%s\n", c);
+	strcpy(c, "-labelled.txt");
+//	printf("labelfile = %s\n", labelfile);
+	labelled = fopen(labelfile, "w+");
+
+	char position[128], stripped[128], output[128];
+
+	int numlines = 0;
+	bPost = FALSE;
+
+	while(fgets(position, sizeof(position), positions))
+	{
+		numlines++;
+
+//		printf("position = %s", position);
+		c = strchr(position, ',');
+//		printf("c is %s\n", c);
+		*c = '\0';
+//		printf("stripped position = %s\n", position);
+		strcpy(stripped, position);
+
+		c++;
+//		printf("c = %s\n", c);
+		labelscore = atof(c);
+//		printf("position = %s, labelscore = %f\n", stripped, labelscore);
+
+//		bbNewGame(&bbBoard);
+		if (BBForsytheToBoard(stripped, &bbBoard) == -1)
+		{
+			printf("Error parsing FEN %s\nstarting new game\n", line + 9);
+			PromptForInput();
+			return;
+		}
+
+		bbBoard.inCheck = BBKingInDanger(&bbBoard, bbBoard.sidetomove);
+		dwInitialPosSignature = bbBoard.signature = GetBBSignature(&bbBoard);
+
+		nn_update_all_pieces(bbBoard.Accumulator, bbBoard.bbPieces);
+		nCompSide = bbBoard.sidetomove;
+		bExactThinkNodes = FALSE;
+		bExactThinkDepth = TRUE;
+		bExactThinkTime = FALSE;
+		nThinkDepth = 3;
+		nCheckNodes = 0xFFFF;
+		Think(1);
+		Think(2);
+		int eval = Think(3);
+		// int eval = Think(4);
+		// printf("myr eval = %d\n", eval);
+
+		// clamp eval to 32 pawns, round to nearest 100, then divide by 100
+		if (eval > 3200)
+			eval = 3200;
+		if (eval < -3200)
+			eval = -3200;
+
+		new_eval = (float)(eval / 100.0);
+//		printf("adjusted eval = %f\n", new_eval);
+				
+		new_eval = 9.0 * (2.0 / (1.0 + exp(-0.5 * new_eval)) - 1.0);
+//		printf("new_eval = %f\n", new_eval);
+		final_eval = (float)(0.333 * labelscore) + (0.667 * new_eval);
+//		printf("final_eval = %f\n", final_eval);
+
+		sprintf(output, "%s,%.4f", stripped, final_eval);
+//		printf("output = %s\n\n", output);
+		fprintf(labelled, "%s\n", output);
+
+		if ((numlines % 10000) == 0)
+			printf("numlines = %d\r", numlines);
+	}
+
+	fclose(positions);
+	fclose(labelled);
+	printf("numlines = %d, DONE!\n", numlines);
+	bLabelling = FALSE;
+}
+
 /*========================================================================
 ** NotHandled - generic error message when a command can't be handled
 ** because the engine is thinking
@@ -870,7 +971,7 @@ void	HandleCommand(void)
         printf("Using bulk counting... ");
 #endif
 
-        printf("perft %d = %I64u in %.2f seconds\n", depth, nPerftMoves, (float)((GetTickCount64() - starttime)) / 1000);
+        printf("perft %d = %llu in %.2f seconds\n", depth, nPerftMoves, (float)((GetTickCount64() - starttime)) / 1000);
 
 #if !USE_BULK_COUNTING
         printf("%ld KNPS\n", nPerftMoves / (GetTickCount64() - starttime));
@@ -982,7 +1083,7 @@ void	HandleCommand(void)
         PromptForInput();
 
         if (bLog)
-        fprintf(logfile, "< Finished eval\n");
+			fprintf(logfile, "< Finished eval\n");
 
         return;
     }
@@ -1040,10 +1141,20 @@ void	HandleCommand(void)
 			printf("Gaviota Tablebases not available!\n");
 
 		PromptForInput();
-
 		return;
 	}
 #endif
+
+	if (!strcmp(command, "label"))
+	{
+		char	szFileName[FILENAME_MAX];
+
+		sscanf(line, "label %s", szFileName);
+		LabelPositionsFile(szFileName);
+
+		PromptForInput();
+		return;
+	}
 
 	if (!strcmp(command, "quit"))
     {
@@ -1329,13 +1440,14 @@ void	HandleCommand(void)
 			return;
 #endif
         char	szTime[16];
+		float	increment;
 
         // Myrddin doesn't have an internal clock, and gets all of its clock info from the "time" command. However,
         // for Fischer style controls, we can add a extra time per move (I've chosen 90% of the increment, just to
         // save a little buffer)
-        sscanf(line, "%s %d %s %d", command, &nLevelMoves, szTime, &nFischerInc);
+        sscanf(line, "%s %d %s %f", command, &nLevelMoves, szTime, &increment);
 
-        nFischerInc *= 900;	// convert to milliseconds and take most of it, just to be safe
+        nFischerInc = (int)(increment * 900.0);	// convert to milliseconds and take most of it, just to be safe
         bExactThinkTime = FALSE;
         bExactThinkDepth = FALSE;
 
@@ -1357,7 +1469,7 @@ void	HandleCommand(void)
 
         // GetTickCount64() returns 1000's of a second, but Winboard uses 100's of a second
         // so multiply what Winboard reports by 10 to match that scale. Then divide
-        // by 30 so that, by default, the engine thinks for no more than 1/30 of the
+        // by CLOCK_TO_USE so that, by default, the engine thinks for no more than 1/Nth of the
         // available time.
         sscanf(line, "time %d", &nTime);
         nDivisor = CLOCK_TO_USE;
@@ -1974,7 +2086,7 @@ int main(void)
 		else
 		{
 			fprintf(logfile, "%s - %-14s\n", szVersion, szInfo);
-			fprintf(logfile, "log=%d, kibitz=%d, hashsize=%lld, cores=%d\n", bLog, bKibitz, dwHashSize, nCPUs);
+			fprintf(logfile, "log=%d, kibitz=%d, resign=%d, hashsize=%lld, cores=%d\n", bLog, bKibitz, nResignVal, dwHashSize, nCPUs);
 #if USE_EGTB
 			fprintf(logfile, "egtbcomp = %d, egtbfolder = %s", nEGTBCompressionType, szEGTBPath);
 #endif
@@ -1996,7 +2108,7 @@ int main(void)
 		printf("\n");
 		printf("#-------------------------------#\n");
 		printf("# %-13s - %-13s #\n", szVersion, szInfo);
-		printf("# Copyright 2025 - John Merlino #\n");
+		printf("# Copyright 2026 - John Merlino #\n");
 		printf("# All Rights Reserved           #\n");
 		printf("#-------------------------------#\n\n");
 		printf("feature done=0\n");	// just in case -- this shouldn't be harmful according to Tim Mann
@@ -2043,6 +2155,7 @@ int main(void)
     bbNewGame(&bbBoard);
 
     bStoreCommand = FALSE;
+	bLabelling = FALSE;
     nEngineMode = ENGINE_IDLE;
     nEngineCommand = NO_COMMAND;
     nCompSide = NO_SIDE;
@@ -2381,7 +2494,27 @@ int main(void)
 
                         printf("1/2-1/2 {Draw by Insufficient Material}\n");
                     }
-                }
+
+					// check for resign
+					if (nResignVal >= ROOK_VAL) // don't let a user set the resign val below the value of a rook
+					{
+						if (nEval <= -nResignVal)
+						{
+							nResignMoves++;
+
+							if (nResignMoves >= NUM_RESIGN_MOVES)
+							{
+								if (bLog)
+									fprintf(logfile, "%s {Myrddin resigns}\n", (nCompSide == WHITE) ? "0-1" : "1-0");
+
+								printf("resign\n");
+								printf("%s {Myrddin resigns}\n", (nCompSide == WHITE) ? "0-1" : "1-0");
+							}
+						}
+						else
+							nResignMoves = 0;
+					}
+				}
 
                 // there's no move, because the PV length is 0
                 if ((evalPV.pvLength == 0) && (prevDepthPV.pvLength == 0) &&

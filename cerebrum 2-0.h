@@ -47,16 +47,17 @@
 //#define NN_DEBUG
 
 // name of the default neural network file
-#define NN_FILE "Myrddin 094.nn"
+#define NN_FILE "Myrddin 095.nn"
+// #define NN_FILE "caligula.nn-512"
 
 #define None -1
 
 // network architecture
 #define NN_SIZE_L0 768
-#define NN_SIZE_L1 256
-#define NN_SIZE_L2 64
-#define NN_SIZE_L3 32
-#define NN_SIZE_L4 1
+#define NN_SIZE_L1 1024
+#define NN_SIZE_L2 32
+#define NN_SIZE_L3 1
+#define NN_SIZE_L4 None
 
 
 /****************************************************************************/

@@ -48,6 +48,7 @@ setboard 3nk3/p2R4/3P1Kp1/8/5p2/3bp3/3p4/8 w - - 0 1 bm Re7 -- Mate in 24
 setboard 1n2kbnr/rp2pppp/2P5/4N3/8/1P4P1/1P1PPP1P/1NB1KB1b w k - 0 10 bm c7 -- Mate in 10
 setboard r4k2/1pq1pp2/3p1bP1/3P4/5PB1/1P6/1P5Q/1K1R3R w - - 0 28 bm Qh7 -- Mate in 10
 setboard 2rr4/5pBk/PqP3p1/1N3pPp/1PQ1bP1P/8/3R4/R4K2 b - - bm Rxc6 -- draw
+setboard 6r1/pk1nq2r/2n1p3/2p2p2/2PpQB2/3P1NP1/P4PB1/4R1K1 w - - bm Qxc6 -- Mate in 9
 
 New
 setboard r3qrk1/p2bnppp/1pnQp3/3pP1B1/2P5/P4N2/2P2PPP/R3KB1R w KQ - 0 2 am Bd3
@@ -56,6 +57,32 @@ setboard 2r1r2k/4PQ1P/p7/Pb4R1/8/5PP1/1b4K1/8 w - - 0 66 bm f4
 setboard 8/5k1p/3b3K/5p2/1P2n3/P6P/8/4R3 w - - 8 60 am Kxh7
 setboard rn3rk1/3n4/1p2pqp1/p2p2Np/3p1P2/2PQN3/PP4PP/4RRK1 w - - 0 19 bm Nxe6
 setboard 6k1/5p1p/P1pb1nq1/6p1/3P4/1BP2PP1/1P1Nb2P/R1B3K1 b - - 0 25 bm Qd3
+
+From CM7000 Docs
+setboard 1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - bm Qd1+; id "BK.01"; ce 9997; pv Qd1+ Kxd1 Bg4+ Kc1 Rd1+;
+setboard r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5 w - - bm d5; id "BK.02"; ce 0114; pv e5 Rd5 f5 f6 Re3 fxe5 dxe5 Kd7 Rce1;
+setboard q1rr1k/3bbnnp/p2p1pp1/2pPp3/PpP1P1P1/1P2BNNP/2BQ1PRK/7R b - - bm f5; id "BK.03";
+setboard nbqkb1r/p3pppp/1p6/2ppP3/3N4/2P5/PPP1QPPP/R1B1KB1R w KQ - bm e6; id "BK.04";
+setboard r1b2rk1/2q1b1pp/p2ppn2/1p6/3QP3/1BN1B3/PPP3PP/R4RK1 w - - bm Nd5 a4; id "BK.05";
+setboard 2r3k1/pppR1pp1/4p3/4P1P1/5P2/1P4K1/P1P5/8 w - - bm g6; id "BK.06";
+setboard 1nk1r1r1/pp2n1pp/4p3/q2pPp1N/b1pP1P2/B1P2R2/2P1B1PP/R2Q2K1 w - - bm Nf6; id "BK.07";
+setboard 4b3/p3kp2/6p1/3pP2p/2pP1P2/4K1P1/P3N2P/8 w - - bm f5; id "BK.08";
+setboard 2kr1bnr/pbpq4/2n1pp2/3p3p/3P1P1B/2N2N1Q/PPP3PP/2KR1B1R w - - bm f5; id "BK.09";
+setboard 3rr1k1/pp3pp1/1qn2np1/8/3p4/PP1R1P2/2P1NQPP/R1B3K1 b - - bm Ne5; id "BK.10";
+setboard 2r1nrk1/p2q1ppp/bp1p4/n1pPp3/P1P1P3/2PBB1N1/4QPPP/R4RK1 w - - bm f4; id "BK.11";
+setboard r3r1k1/ppqb1ppp/8/4p1NQ/8/2P5/PP3PPP/R3R1K1 b - - bm Bf5; id "BK.12";
+setboard r2q1rk1/4bppp/p2p4/2pP4/3pP3/3Q4/PP1B1PPP/R3R1K1 w - - bm b4; id "BK.13";
+setboard rnb2r1k/pp2p2p/2pp2p1/q2P1p2/8/1Pb2NP1/PB2PPBP/R2Q1RK1 w - - bm Qd2 Qe1; id "BK.14";
+setboard 2r3k1/1p2q1pp/2b1pr2/p1pp4/6Q1/1P1PP1R1/P1PN2PP/5RK1 w - - bm Qxg7+; id "BK.15";
+setboard r1bqkb1r/4npp1/p1p4p/1p1pP1B1/8/1B6/PPPN1PPP/R2Q1RK1 w kq - bm Ne4; id "BK.16";
+setboard r2q1rk1/1ppnbppp/p2p1nb1/3Pp3/2P1P1P1/2N2N1P/PPB1QP2/R1B2RK1 b - - bm h5; id "BK.17";
+setboard r1bq1rk1/pp2ppbp/2np2p1/2n5/P3PP2/N1P2N2/1PB3PP/R1B1QRK1 b - - bm Nb3; id "BK.18";
+setboard 3rr3/2pq2pk/p2p1pnp/8/2QBPP2/1P6/P5PP/4RRK1 b - - bm Rxe4; id "BK.19";
+setboard r4k2/pb2bp1r/1p1qp2p/3pNp2/3P1P2/2N3P1/PPP1Q2P/2KRR3 w - - bm g4; id "BK.20";
+setboard 3rn2k/ppb2rpp/2ppqp2/5N2/2P1P3/1P5Q/PB3PPP/3RR1K1 w - - bm Nh6; id "BK.21";
+setboard 2r2rk1/1bqnbpp1/1p1ppn1p/pP6/N1P1P3/P2B1N1P/1B2QPP1/R2R2K1 b - - bm Bxe4; id "BK.22";
+setboard r1bqk2r/pp2bppp/2p5/3pP3/P2Q1P2/2N1B3/1PP3PP/R4RK1 b kq - bm f6; id "BK.23";
+setboard r2qnrnk/p2b2b1/1p1p2pp/2pPpp2/1PP1P3/PRNBB3/3QNPPP/5RK1 w - - bm f4; id "BK.24";
 
 Engine Crackers
 setboard 1rb1r3/5qk1/3b2p1/1PnPp1Pp/4B3/pP3Q2/P2N1B1P/1KR3R1 b - - bm Qxf3 ;
@@ -203,10 +230,6 @@ setboard r3k2r/p6p/8/B7/1pp1p3/3b4/P6P/R3K2R w KQkq - // perft(6) = 77,054,993
 setboard 8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - // perft(7) = 178,633,661
 setboard 8/5p2/8/2k3P1/p3K3/8/1P6/8 b - - // perft(8) = 64,451,405
 setboard r3k2r/pb3p2/5npp/n2p4/1p1PPB2/6P1/P2N1PBP/R3K2R w KQkq - // perft(5) = 29,179,893
-0x88 version (bulk counting) = 204.5s
-Original Bitboard version = 65.4s
-Improved Bitboard version = 52.6s
-NN version = 56.4s
 
 Mate in 2 Chessnut
 setboard 3k4/R6R/3n4/8/8/3K4/8/8 w - - bm Rhg7; c0 "Bonus Socius (1266) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #1";
@@ -250,6 +273,13 @@ setboard 8/K3B3/4N3/1b2k1N1/6Pp/n1r5/1Q6/bB1Rn3 w - - bm Ba2; c0 "Sandor Hertman
 setboard 5nBb/3b2Q1/5r2/7R/3k3n/K7/2P5/4R3 w - - bm Kb4; c0 "J. Hartong (1919) 2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #39";
 setboard r3k3/p1p5/Q3K3/8/8/8/8/8 w - - bm Qa1; c0 "2-move mate"; id "Classic Chess Problems, Kenneth S. Howard, 1970, puzzle #40";
 
-Alex's changes:
-int nFutile = MINOR_VAL; // was PAWN_VAL => +6
-#define ASPIRATION_WINDOW 10 // was 16 => +14
+cutechess-cli.exe -engine name="isa dev" cmd="isa_4_1_avx2.exe" proto=xboard tc=0/8+0.08 -engine name="isa current" cmd=isa_current.exe proto=xboard tc=0/8+0.08 book=8moves_GM.bin -draw movenumber=40 movecount=20 score=0 -resign movecount=2 score=500 -games 100000 -sprt elo0=0 elo1=5 alpha=0.05 beta=0.05 -concurrency 16 -ratinginterval 10 -pgnout isatest_nn.pgn
+for non-regression I use elo0=-5 and elo1=0
+
+2) Labelling again but reformatting engine score in this way :
+// the score from engine is [-32,32], will compress it in [-9,9] but with a sigmoide shape that 
+//returns +8.95  (almost won) when engine score = +2 . 
+ eval_eng_n:= 9.0 * math.tanh(1.5*eval_eng)    
+// then creates a label with the ponderate average of eval value and result value. I'm using 50'% at first
+final_eval = e_eng_n * engine_eval_weight + eval_results * (1.0 -engine_eval_weight)
+For example , a almost win position gave in result score (wtr) +9.000, but the engine score was +2.02, so the ponderate sum would be +5.51 (at 50%). With this change, the ponderate sum would give +9*0.5+8.97*0.5 = +8.98 
