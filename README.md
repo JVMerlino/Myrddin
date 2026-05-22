@@ -2,7 +2,7 @@ Myrddin v0.95 Release Notes -- 4/22/26
 --------------------------------------------------------------------------------
 Myrddin is a winboard-compliant chess engine to a reasonable degree. It supports protover 1 primarily to support the Chessmaster interface, and also protover 2.
 
-Version 0.94 plays approximately 3210 ELO (CCRL) at 1 CPU and probably 100-200 points higher against humans. This is an improvement of approximately 40 points compared to version 0.94.
+Version 0.95 plays approximately 3210 ELO (CCRL) at 1 CPU and probably 100-200 points higher against humans. This is an improvement of approximately 40 points compared to version 0.94.
 
 The following winboard commands are supported:\
 protover\
