@@ -1,8 +1,8 @@
-Myrddin v0.95 Release Notes -- 4/22/26
+Myrddin v0.96 Release Notes -- 6/7/26
 --------------------------------------------------------------------------------
 Myrddin is a winboard-compliant chess engine to a reasonable degree. It supports protover 1 primarily to support the Chessmaster interface, and also protover 2.
 
-Version 0.95 plays approximately 3210 ELO (CCRL) at 1 CPU and probably 100-200 points higher against humans. This is an improvement of approximately 40 points compared to version 0.94.
+Version 0.96 plays approximately 3280 ELO (CCRL) at 1 CPU, 3350 at 4 CPU, and probably 100-200 points higher against humans. This is an improvement of approximately 80 points compared to version 0.95.
 
 The following winboard commands are supported:\
 protover\
@@ -22,7 +22,7 @@ st\
 nps\
 hard/easy\
 memory\
-cores - SMP IS NO LONGER SUPPORTED! It may return in a subsequent version.\
+cores\
 result\
 undo\
 post/nopost\
@@ -44,7 +44,7 @@ Winboard UI notes: \
 
 General Notes:\
 -- Myrddin uses an "NNUE" architecture for position evaluation. The code was graciously provided by David Carteau (Orion) via the Cerebrum library.\
--- Myrddin's "very lazy SMP" implementation uses multiple secondary processes to fill the transposition, eval and pawn hash tables so the primary process can search deeper in the same amount of time. SMP SUPPORT IS DISABLED IN v0.94. It may return in a future version.
+-- Myrddin's "very lazy SMP" implementation uses multiple secondary processes to fill the transposition, eval and pawn hash tables so the primary process can search deeper in the same amount of time.\
 -- Myrddin uses Pradu Kannan's "magicmoves" code for move generation of sliding pieces.\
 -- Search is basic alpha/beta, with reasonable and generally conservative extensions and reductions.\
 -- Max search depth is 128. \
@@ -61,7 +61,7 @@ Myrddin chess engine written by John Merlino, with lots of inspiration, assistan
 –- Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's archive site)\
 –- Lars Hallerstrom - The Mad Tester!\
 –- David Carteau - Orion and Cerebrum (provided Cerebrum NN library)\
-–- Martin Sedlak - Cheng (guided me through Texel tuning)\
+–- Martin Sedlak - Cheng, Myracle GUI (guided me through Texel tuning)\
 –- Dann Corbit - Helped bring the first bitboard version of Myrddin to release\
 –- Bruce Moreland - Gerbil (well-documented code on his website taught me the basics)\
 –- Tom Kerrigan - TSCP (a great starting point)\
@@ -74,6 +74,15 @@ Myrddin chess engine written by John Merlino, with lots of inspiration, assistan
 
 Version List
 ---------------
+Version 0.96 (6/7/26) Change List:\
+-- Improved Neural Network (many thanks to Andres Valverde for his exhaustive testing of Cerebrum!)\
+-- Restored SMP support (many thanks to Martin Sedlak for his Myracle GUI and testing!)\
+-- Added Improving heuristic\
+-- Added SEE pruning in the main search\
+-- Fixed a bug in SEE calculation that could score a winning capture as equal\
+-- Somewhat more aggressive futility pruning\
+-- The "reuse" xboard feature is now supported
+
 Version 0.95 (4/22/26) Change List:\
 -- Now using SEE for move ordering of captures, and raised castling moves higher in the move order\
 -- Now using IIR on pv nodes\
