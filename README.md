@@ -61,7 +61,7 @@ Myrddin chess engine written by John Merlino, with lots of inspiration, assistan
 –- Ron Murawski - Horizon (great amounts of assistance as I was starting out, plus hosting Myrddin's archive site)\
 –- Lars Hallerstrom - The Mad Tester!\
 –- David Carteau - Orion and Cerebrum (provided Cerebrum NN library)\
-–- Martin Sedlak - Cheng, Myracle GUI (guided me through Texel tuning)\
+–- Martin Sedlák - Cheng, Myracle GUI (guided me through Texel tuning)\
 –- Dann Corbit - Helped bring the first bitboard version of Myrddin to release\
 –- Bruce Moreland - Gerbil (well-documented code on his website taught me the basics)\
 –- Tom Kerrigan - TSCP (a great starting point)\
@@ -76,7 +76,7 @@ Version List
 ---------------
 Version 0.96 (6/7/26) Change List:\
 -- Improved Neural Network (many thanks to Andres Valverde for his exhaustive testing of Cerebrum!)\
--- Restored SMP support (many thanks to Martin Sedlak for his Myracle GUI and testing!)\
+-- Restored SMP support (many thanks to Martin Sedlák for his Myracle GUI and testing!)\
 -- Added Improving heuristic\
 -- Added SEE pruning in the main search\
 -- Fixed a bug in SEE calculation that could score a winning capture as equal\
