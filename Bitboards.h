@@ -38,11 +38,7 @@ typedef uint64_t Bitboard;
 #include <intrin.h>
 #endif
 
-#if USE_CEREBRUM_1_0
-#include "cerebrum 1-0.h"
-#else
 #include "cerebrum 2-0.h"
-#endif
 
 enum SQUARES {
 	BB_A8 = 0, BB_B8, BB_C8, BB_D8, BB_E8, BB_F8, BB_G8, BB_H8,

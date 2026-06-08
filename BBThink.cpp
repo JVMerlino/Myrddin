@@ -54,7 +54,7 @@ BB_BOARD	bbEvalBoard;
 
 CHESSMOVE	cmEvalGameMoveList[MAX_MOVE_LIST];
 
-// total time on dev machine with bulk counting = 49.3s (45.7 if not using incremental accumulator update)
+// total time on dev machine with bulk counting = 31.4s, without bulk counting = 69.03s
 PERFT_TEST	perft_tests[NUM_PERFT_TESTS] =
 {
 "r3k2r/8/8/8/3pPp2/8/8/R3K1RR b KQkq e3 0 1", 6, 485647607,
@@ -79,6 +79,8 @@ CHESSMOVE	counterMove[64][64];
 #if USE_HISTORY
 static int	cmHistory[64][64];
 #endif
+
+#define USE_BULK_COUNTING	TRUE
 
 /*========================================================================
 ** doBBPerft - calculates the number of leaf nodes of a given depth from
@@ -593,8 +595,8 @@ int BBSEEMove(CHESSMOVE* cmMove, int ctSide)
 
 	// there's no need to perform SEE on a move in which the first capture is
 	// made by a piece that is of lesser value than the captured piece
-	if (nPieceVals[PIECEOF(capturer)] < nPieceVals[PIECEOF(captured)])
-		return(0);
+	if (nPieceVals[PIECEOF(captured)] > nPieceVals[PIECEOF(capturer)])
+		return(nPieceVals[PIECEOF(captured)] - nPieceVals[PIECEOF(capturer)]);
 
 	// make the move
 	BBMakeMove(cmMove, &bbEvalBoard, FALSE);
@@ -1120,44 +1122,42 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 
 	int nStaticEval = -MAX_WINDOW;
 
-#if USE_FUTILITY_PRUNING
-#if 0
-	if (!bNullMove && !bPVNode && !bInCheck && (nDepth < 4))
-	{
-		int nAlphaMargin[4] = { 20000, 150, 275, 325 };
-		int nBetaMargin[4] = { 20000, 75, 150, 275 };
+#if USE_IMPROVING
+	BOOL bImproving = FALSE;
+	nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
 
-		nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
-
-		if (nStaticEval <= nAlpha - nAlphaMargin[nDepth])
-		{
-			nQuiesceDepth = 0;
-
-#if USE_QS_RECAPTURE
-			int nScore = BBQuiesce(nAlpha - nAlphaMargin[nDepth], nBeta - nAlphaMargin[nDepth], pvLine, NO_SQUARE);
-#else
-			int nScore = BBQuiesce(nAlpha - nAlphaMargin[nDepth], nBeta - nAlphaMargin[nDepth], pvLine);
+	nEvalStack[nEvalPly] = nStaticEval;
+	if ((nEvalPly > 2) && (nEvalStack[nEvalPly] > nEvalStack[nEvalPly - 2]) && !bInCheck)
+		bImproving = TRUE;
 #endif
-			if (nScore <= nAlpha - nAlphaMargin[nDepth])
-				return(nAlpha);
-		}
 
-		if (nStaticEval >= nBeta + nBetaMargin[nDepth])
-			return(nBeta); 
-	}
-#else
+#if USE_FUTILITY_PRUNING
 	if (!bPVNode && !bInCheck)
 	{
 		if ((nDepth <= 7) && (abs(nBeta) < MATE_THREAT))
 		{
-			nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
-			if ((nStaticEval - (75 * nDepth)) >= nBeta)
+			if (nStaticEval == -MAX_WINDOW);
+				nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
+
+			int nRFPMargin = 75 * nDepth;
+#if USE_IMPROVING
+			if (bImproving)
+				nRFPMargin += 40;
+#endif
+
+			if ((nStaticEval - nRFPMargin) >= nBeta)
 				return(nBeta);
 		}
 
 		if (nDepth <= 3)
 		{
-			int nMargin = 300 + (200 * (nDepth - 1));
+			int nMargin = 200 + (125 * (nDepth - 1));
+#if USE_IMPROVING
+			if (bImproving)
+				nMargin -= 40;
+			else
+				nMargin += 40;
+#endif
 			if (nStaticEval == -MAX_WINDOW)
 				nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
 			if (nStaticEval + nMargin <= nAlpha)
@@ -1168,7 +1168,6 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 			}
 		}
 	}
-#endif
 #endif
 
 #if USE_NULL_MOVE
@@ -1214,7 +1213,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		if (null_eval >= nBeta)
 		{
 #if USE_HASH
-			SaveHash(NULL, nDepth, nBeta, HASH_BETA, nEvalPly, bbSig);
+//			SaveHash(NULL, nDepth, nBeta, HASH_BETA, nEvalPly, bbSig);
 #endif
 #if 0 // FULL_LOG
 			fprintf(logfile, "Returning Null Eval\n");
@@ -1312,15 +1311,15 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 
 #if USE_IID
 	// internal iterative deepening -- no hash move -- search to a shallower depth (depth / 3) to hopefully find a best move
-	if (!bFound && (nDepth >= 5))
+	if (!bFound && bPVNode && (nDepth >= 5))
 	{
 		PV	pvIID;
 		int nScore;
 
-		nScore = BBAlphaBeta(nDepth / 3, nAlpha, nBeta, &pvIID, FALSE);
+		nScore = BBAlphaBeta(nDepth / 2, nAlpha, nBeta, &pvIID, FALSE);
 #if 1
 		if (nScore <= nAlpha)
-			nScore = BBAlphaBeta(nDepth / 3, -MAX_WINDOW, MAX_WINDOW, &pvIID, FALSE);
+			BBAlphaBeta(nDepth / 2, -MAX_WINDOW, MAX_WINDOW, &pvIID, FALSE);
 #else
 		if (nScore > nAlpha)
 #endif
@@ -1382,17 +1381,6 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 
 	cmBestMove.fsquare = NO_SQUARE;
 
-#if USE_IMPROVING
-	BOOL bImproving = FALSE;
-
-	if (nStaticEval == -MAX_WINDOW)
-		nStaticEval = BBEvaluate(&bbEvalBoard, -MAX_WINDOW, MAX_WINDOW);
-
-	nEvalStack[nEvalPly] = nStaticEval;
-	if ((nEvalPly > 2) && (nEvalStack[nEvalPly] > nEvalStack[nEvalPly - 2]))
-		bImproving = TRUE;
-#endif
-
 #if USE_LMP
 	BOOL bUseLMP = (!bInCheck && (nDepth < 4) && !bPVNode && (BitCount(bbEvalBoard.bbOccupancy) > 5));	// don't prune potential winning quiet moves from tablebases
 #endif
@@ -1421,7 +1409,13 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 		// get the SEE value of a capture - used by LMR
 		int nSee = 0;
 		if (cmMove.moveflag & MOVE_CAPTURE)
+		{
 			nSee = BBSEEMove(&cmMove, bbEvalBoard.sidetomove);
+#if USE_SEE_PRUNING
+			if ((n > 0) && (nDepth <= 7) && !bPVNode && (nEvalPly > 1) && (nSee < (-PAWN_VAL * nDepth)))
+				continue;
+#endif
+		}
 
 		BBMakeMove(&cmMove, &bbEvalBoard, TRUE);
 		cmMove.dwSignature = bbEvalBoard.signature;	// bbEvalBoard.signature;
@@ -1442,7 +1436,7 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 			&& !(cmMove.moveflag & (MOVE_PROMOTED | MOVE_CHECK | MOVE_OOO | MOVE_OO))	// not a promotion, castling or checking move
 			&& (!(cmMove.moveflag & MOVE_CAPTURE) || (nSee < 0))    // must be either a bad capture or not a capture
 			// && (nAlpha > -MATE_THREAT)	// not in a mate threat against the side to move
-			&& (nDepth > 3)			// not at or near the leaves
+			&& (nDepth > 1)			// not at the leaves
 			&& (cmMove.nScore < KILLER_3_SORT_VAL)  // not a killer move
 			// && ((PIECEOF(tpiece) != PAWN) || !IsPassedPawn(&bbEvalBoard, tsquare, (COLOROF(tpiece) == XWHITE ? WHITE : BLACK))) // not a move by a passer
 			)
@@ -1451,14 +1445,11 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 
 			if (nReductions && bPVNode)
 				nReductions--;
+
 #if USE_IMPROVING
 			if (!bImproving)
 				nReductions++;
 #endif
-//			if (nReductions && (cmMove.nScore >= KILLER_3_SORT_VAL) && !(cmMove.moveflag & MOVE_CAPTURE))  // reduce less for quiet killer moves
-//				nReductions--;
-//			if (nReductions && (cmMove.moveflag & 0x70)) // (MOVE_PROMOTED | MOVE_OOO | MOVE_OO)
-//				nReductions--;
 		}
 
 		// try some extension conditions - check or single reply
@@ -1466,7 +1457,12 @@ static int BBAlphaBeta(int nDepth, int nAlpha, int nBeta, PV* pvLine, BOOL bNull
 			nReductions--;
 
 #if USE_LMP
-		if (bUseLMP && (n > (12 + (nDepth * 2))) && !(cmMove.moveflag & MOVE_CHECK) && (nEvalPly > 1) && (nReductions >= 0))
+#if USE_IMPROVING
+		int nLMPThreshold = bImproving ? (14 + (nDepth * 2)) : (10 + (nDepth * 2));
+#else
+		int nLMPThreshold = 12 + (nDepth * 2);
+#endif
+		if (bUseLMP && (n > nLMPThreshold) && !(cmMove.moveflag & MOVE_CHECK) && (nEvalPly > 1) && (nReductions >= 0))
 		{
 			BBUnMakeMove(&cmMove, &bbEvalBoard, TRUE);
 			nEvalMove--;

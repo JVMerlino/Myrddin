@@ -32,15 +32,13 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 // The Chessmaster Team - Lots of brilliant people, but mostly Johan de Koning (The King engine), Don Laabs, James Stoddard and Dave Cobb
 //
 // DONE -- add to release notes
-// Now using SEE for move ordering of captures, and raised castling moves higher in the move order
-// Now using IIR on pv nodes
-// More aggressive futility pruning
-// Added forced 16-byte alignment of transposition and eval hash structures (thanks to Jim Ablett!)
-// Added counter move heuristic
-// New network architecture of 768->1024->32->1
-// Fixed a bug such that fractional time increments, common in hyperbullet or testing (e.g. 0.1 second), were ignored due to truncation. 
-//		So an increment of 0.1 second per move would be set to 0.
-// Restored the resign feature, which somehow got deleted in v0.91
+// Improved Neural Network (many thanks to Andres Valverde for his exhaustive testing of Cerebrum!)
+// Restored SMP support (many thanks to Martin Sedlak for his Myracle GUI and testing!)
+// Added Improving heuristic
+// Added SEE pruning in the main search
+// Fixed a bug in SEE calculation that could score a winning capture as equal
+// Somewhat more aggressive futility pruning
+// The "reuse" xboard feature is now supported
 //
 // TODO -- in no particular order
 
@@ -58,20 +56,15 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 #include "book.h"
 #include "hash.h"
 #include "magicmoves.h"
-
-#if USE_CEREBRUM_1_0
-#include "cerebrum.h"
-#else
 #include "cerebrum 2-0.h"
-#endif
 
 #if USE_EGTB
 #include "tbprobe.h"
 #include "gtb-probe.h"
 #endif
 
-char	szVersion[16] = "Myrddin 0.95";
-char	szInfo[32] = "4/19/26";
+char	szVersion[16] = "Myrddin 0.96";
+char	szInfo[32] = "6/7/26";
 
 CHESSMOVE	cmGameMoveList[MAX_MOVE_LIST];
 
@@ -717,7 +710,7 @@ void LabelPositionsFile(char* szFileName)
 				
 		new_eval = 9.0 * (2.0 / (1.0 + exp(-0.5 * new_eval)) - 1.0);
 //		printf("new_eval = %f\n", new_eval);
-		final_eval = (float)(0.333 * labelscore) + (0.667 * new_eval);
+		final_eval = (float)(0.5 * labelscore) + (0.5 * new_eval);
 //		printf("final_eval = %f\n", final_eval);
 
 		sprintf(output, "%s,%.4f", stripped, final_eval);
@@ -770,7 +763,10 @@ void	HandleCommand(void)
         {
             printf("feature done=0\n");
             printf("feature setboard=1 playother=1 draw=0\n");
-            printf("feature sigint=0 sigterm=0 reuse=0 analyze=1 memory=1 nps=1\n");
+            printf("feature sigint=0 sigterm=0 reuse=1 analyze=1 memory=1 nps=1\n");
+#if USE_SMP
+			printf("feature smp=1\n");
+#endif
 			printf("feature variants=normal\n");
 			printf("feature myname=\"%s\"\n", szVersion);
 			printf("feature done=1\n");
@@ -1160,21 +1156,32 @@ void	HandleCommand(void)
     {
 #if USE_SMP
 		if (!bSlave)
+		{
 			SendSlavesString(command);
+			// Wait for all slave processes to exit before tearing down shared memory
+			for (int n = 0; n < nCPUs - 1; n++)
+			{
+				if (pi[n].hProcess)
+					WaitForSingleObject(pi[n].hProcess, 1000);  // 1 second timeout per slave
+			}
 #endif
 #if USE_HASH
-        CloseHash();
+	        CloseHash();
 #endif
-        if (bLog)
-        {
-            fflush(logfile);
-            fclose(logfile);
-        }
-
 #if USE_EGTB
-        GaviotaTBClose();
+	        GaviotaTBClose();
 #endif
-        exit(0);
+#if USE_SMP
+	}
+#endif
+
+		if (bLog)
+		{
+			fflush(logfile);
+			fclose(logfile);
+		}
+
+		exit(0);
     }
 
     if (!strcmp(command, "exit"))
@@ -1198,19 +1205,30 @@ void	HandleCommand(void)
 		{
 #if USE_SMP
 			if (!bSlave)
-				SendSlavesString((char *)"quit");
+			{
+				SendSlavesString(command);
+				// Wait for all slave processes to exit before tearing down shared memory
+				for (int n = 0; n < nCPUs - 1; n++)
+				{
+					if (pi[n].hProcess)
+						WaitForSingleObject(pi[n].hProcess, 1000);  // 1 second timeout per slave
+				}
 #endif
 #if USE_HASH
-	        CloseHash();
+				CloseHash();
 #endif
-            if (bLog)
+#if USE_EGTB
+				GaviotaTBClose();
+#endif
+#if USE_SMP
+			}
+#endif
+
+			if (bLog)
             {
                 fflush(logfile);
                 fclose(logfile);
             }
-#if USE_EGTB
-			GaviotaTBClose();
-#endif
 			exit(0);
 		}
     }
@@ -1997,7 +2015,7 @@ void StartProcesses(int nCPUs)
 				NULL,           // Thread handle not inheritable
 				FALSE,          // Set handle inheritance to FALSE
 #if DEBUG_SMP
-				CREATE_NO_WINDOW, // CREATE_NEW_CONSOLE,
+				CREATE_NEW_CONSOLE,
 #else
 				CREATE_NO_WINDOW,              // No creation flags
 #endif
@@ -2026,6 +2044,7 @@ void KillProcesses(void)
 	{
         TerminateProcess(pi[n].hProcess, 0); // Don't use force, just get a bigger hammer.
 		CloseHandle(pi[n].hThread);
+		CloseHandle(pi[n].hProcess);
 	}
 }
 #endif
@@ -2050,10 +2069,6 @@ int main(int argc, char *argv[])
 int main(void)
 #endif
 {
-#if USE_SMP
-	atexit(KillProcesses);	// just in case the program was shut down via the dos box, this will cover all exit cases
-#endif
-
     bLog = bKibitz = FALSE;
 
 #if USE_SMP
@@ -2125,10 +2140,14 @@ int main(void)
 #endif
 
 #if USE_SMP
-	StartProcesses(nCPUs);
+	if (!bSlave)
+	{
 #if DEBUG_SMP
-	printf("Launching %d process%s\n", nCPUs, (nCPUs > 1 ? "es" : ""));
+		printf("Launching %d process%s\n", nCPUs, (nCPUs > 1 ? "es" : ""));
 #endif
+		StartProcesses(nCPUs);
+		atexit(KillProcesses);	// just in case the program was shut down via the dos box, this will cover all exit cases
+	}
 #endif
 
     initbitboards();

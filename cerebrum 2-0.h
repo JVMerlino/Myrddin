@@ -47,8 +47,8 @@
 //#define NN_DEBUG
 
 // name of the default neural network file
-#define NN_FILE "Myrddin 095.nn"
-// #define NN_FILE "caligula.nn-512"
+#define NN_FILE "Myrddin096.nn"
+// #define NN_FILE "caligula.nn-1024"
 
 #define None -1
 

@@ -66,11 +66,8 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define USE_LMP				TRUE
 
 #define USE_SEE				TRUE	
-#define USE_SEE_MOVE_ORDER	TRUE	// not helpful
-
-#define USE_INCREMENTAL_ACC_UPDATE TRUE
-
-#define USE_CEREBRUM_1_0	FALSE	
+#define USE_SEE_MOVE_ORDER	TRUE
+#define USE_SEE_PRUNING		TRUE
 
 #define TIME_BANK			500	// milliseconds clock to keep as a buffer
 #ifdef _DEBUG
@@ -90,7 +87,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #define USE_SMP				FALSE
 #else
 #define USE_EGTB			TRUE
-#define USE_SMP				FALSE
+#define USE_SMP				TRUE
 #endif
 
 #if USE_SMP

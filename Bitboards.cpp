@@ -84,14 +84,8 @@ void RemovePiece(BB_BOARD* Board, int square, BOOL bUpdateNN)
 	ClearBit(&Board->bbMaterial[color], square);
 	ClearBit(&Board->bbOccupancy, square);
 
-#if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
-#if USE_CEREBRUM_1_0
-		nn_del_piece(Board->Accumulator, pstpiece, color, square ^ 56);
-#else
 		nn_del_piece(Board->Accumulator, 5 - pstpiece, color, square ^ 56);
-#endif
-#endif
 }
 
 void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN)
@@ -107,14 +101,8 @@ void PutPiece(BB_BOARD *Board, int piece, int square, BOOL bUpdateNN)
     SetBit(&Board->bbMaterial[color], square);
     SetBit(&Board->bbOccupancy, square);
 
-#if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
-#if USE_CEREBRUM_1_0
-		nn_add_piece(Board->Accumulator, pstpiece, color, square ^ 56);
-#else
 		nn_add_piece(Board->Accumulator, 5 - pstpiece, color, square ^ 56);
-#endif
-#endif
 }
 
 void MovePiece(BB_BOARD* Board, int from, int to, BOOL bUpdateNN)
@@ -136,14 +124,8 @@ void MovePiece(BB_BOARD* Board, int from, int to, BOOL bUpdateNN)
 	SetBit(&Board->bbMaterial[color], to);
 	SetBit(&Board->bbOccupancy, to);
 
-#if USE_INCREMENTAL_ACC_UPDATE
 	if (bUpdateNN)
-#if USE_CEREBRUM_1_0
-		nn_mov_piece(Board->Accumulator, pstpiece, color, from ^ 56, to ^ 56);
-#else
 		nn_mov_piece(Board->Accumulator, 5 - pstpiece, color, from ^ 56, to ^ 56);
-#endif
-#endif
 }
 
 void initbitboards(void)

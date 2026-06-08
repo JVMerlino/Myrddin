@@ -586,10 +586,6 @@ void BBMakeMove(CHESSMOVE* move_to_make, BB_BOARD* Board, BOOL bUpdateAcc)
     save_undo->captured_piece = (PieceType)captured_piece;
     save_undo->fifty_move = (BYTE)Board->fifty;
 
-#if !USE_INCREMENTAL_ACC_UPDATE
-	bUpdateAcc = FALSE;
-#endif
-
     // fix the board signature -- other fixes may be necessary later in this function
     dwSignature = save_undo->dwSignature;
 
@@ -736,10 +732,6 @@ void BBUnMakeMove(CHESSMOVE *move_to_unmake, BB_BOARD *Board, BOOL bUpdateAcc)
     SquareType  from = move_to_unmake->fsquare;
     SquareType	to = move_to_unmake->tsquare;
     ColorType   which_color = COLOROF(Board->squares[to]);
-
-#if !USE_INCREMENTAL_ACC_UPDATE
-	bUpdateAcc = FALSE;
-#endif
 
 	save_undo = &move_to_unmake->save_undo;
 

@@ -58,6 +58,20 @@ setboard 8/5k1p/3b3K/5p2/1P2n3/P6P/8/4R3 w - - 8 60 am Kxh7
 setboard rn3rk1/3n4/1p2pqp1/p2p2Np/3p1P2/2PQN3/PP4PP/4RRK1 w - - 0 19 bm Nxe6
 setboard 6k1/5p1p/P1pb1nq1/6p1/3P4/1BP2PP1/1P1Nb2P/R1B3K1 b - - 0 25 bm Qd3
 
+From Martin
+setboard 8/4kp2/1p2p3/1P2P1p1/1P4P1/3K4/8/8 b - - 6 57", "f5 f6", 10, 100, 0
+setboard 1rb2rk1/4R1p1/1pqn1pBp/3p4/5Q2/1NP3PP/6PK/4R3 w - - 0 30", "Re1e6", 10, -scInfinity, 0
+setboard rn1q1rk1/pbpp2pp/1p1bp3/5p2/1PPP4/P2BP3/2QN1PPP/R1B2RK1 b - b3 0 11", "Bxh2+", 10, -scInfinity, 0
+setboard 8/6B1/p5p1/Pp4kp/1P5r/5P1Q/4q1PK/8 w - -", "Qxh4", 10, -scInfinity, 0
+setboard rn3r2/1bq2p1k/p3p3/1pb1P1Q1/P1p5/2P5/4BPPP/R2R2K1 w - - 5 28", "Bd3", 10, -scInfinity, 0
+setboard 8/2r3p1/2P4p/p2B1P2/Pp3Kp1/7k/1P2r3/3R4 w - - 6 50", "Rh1+", 10, 15, 0
+setboard 2r3rk/p2nBb1p/1pB2P2/1P6/P1PP3b/2Q1N1q1/6N1/2R3K1 b", "Rxc6", 10, -scInfinity, 0
+setboard rnbq2k1/p1r2p1p/1p1p1Pp1/1BpPn1N1/P7/2P5/6PP/R1B1QRK1 w - -", "Nxh7", 10, -scInfinity, 0
+setboard 3r2k1/5pp1/p1B4p/qp1P4/2n5/r1P3P1/5PKP/2QRR3 w - - 0 27", "d6", 10, -scInfinity, 0
+setboard 1r4r1/3q1npk/2b1pbnp/Rp1p4/1N1P3P/2PQ1pP1/1K3B2/5B1R w - - 0 1", "Qxg6+", 10, -scInfinity, 0
+setboard rn3r2/1bq2ppk/p3p2p/1pb1P2Q/P1p5/2P2N2/3BBPPP/R2R2K1 w - - 4 20", "Bxh6", 10, -scInfinity, 0
+setboard 1q5r/r3bpk1/2b2Np1/3pP1Qp/1Pp2P1B/pn5P/R5PK/1B1R4 w - - 0 44", "Rxa3", 10, -scInfinity, 0
+
 From CM7000 Docs
 setboard 1k1r4/pp1b1R2/3q2pp/4p3/2B5/4Q3/PPP2B2/2K5 b - - bm Qd1+; id "BK.01"; ce 9997; pv Qd1+ Kxd1 Bg4+ Kc1 Rd1+;
 setboard r1k2/4npp1/1ppr3p/p6P/P2PPPP1/1NR5/5K2/2R5 w - - bm d5; id "BK.02"; ce 0114; pv e5 Rd5 f5 f6 Re3 fxe5 dxe5 Kd7 Rce1;

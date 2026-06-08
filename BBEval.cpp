@@ -21,12 +21,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 #include "Bitboards.h"
 #include "Hash.h"
 #include "MoveGen.h"
-
-#if USE_CEREBRUM_1_0
-#include "cerebrum 1-0.h"
-#else
 #include "cerebrum 2-0.h"
-#endif
 
 #if USE_EGTB
 #include "TBProbe.h"
@@ -105,10 +100,6 @@ int BBEvaluate(BB_BOARD *EvalBoard, int nAlpha, int nBeta)
             }
         }
     }
-
-#if !USE_INCREMENTAL_ACC_UPDATE
-	nn_update_all_pieces(EvalBoard->Accumulator, EvalBoard->bbPieces);
-#endif
 
 	nEval = nn_evaluate(EvalBoard->Accumulator, EvalBoard->sidetomove);
 
